@@ -1,7 +1,7 @@
 ---
-title: "InPAS Vignette"
-author: "Jianhong Ou, Sungmi Park, Michael Green, Lihua Julie Zhu"
-date: "`r doc_date()`"
+title: "InPAS: de novo identification of APA sites using RNA-seq data"
+author: "Jianhong Ou, Haibo Liu, Sungmi Park, Michael Green, Lihua Julie Zhu"
+date: "`r Sys.Date()`"
 package: "`r pkg_ver('InPAS')`"
 bibliography: ref.bib
 csl: nature.csl
@@ -20,59 +20,69 @@ output:
 ---
 ```{r preloadLibrary, echo=FALSE, results="hide", warning=FALSE}
 suppressPackageStartupMessages({
+    if (!require("BSgenome.Mmusculus.UCSC.mm10"))
+    {
+      BiocManager::install("BSgenome.Mmusculus.UCSC.mm10")
+    }
+  
+   if (!require("TxDb.Mmusculus.UCSC.mm10.knownGene"))
+    {
+      BiocManager::install("TxDb.Mmusculus.UCSC.mm10.knownGene")
+    }
+  
     library(InPAS)
     library(BSgenome.Mmusculus.UCSC.mm10)
     library(TxDb.Mmusculus.UCSC.mm10.knownGene)
-    library(org.Hs.eg.db)
     library(cleanUpdTSeq)
 })
 ```
 # Introduction
 
 Alternative polyadenylation (APA) is one of the most important 
-post-transcriptional regulation mechanisms which is prevalent in human 
-genes. Like alternative splicing, APA can create proteome diversity. 
+post-transcriptional regulation mechanisms which is prevalent in Eukaryotas. Like alternative splicing, APA can increase transcriptome diversity. 
 In addition, it defines 3' UTR and results in altered expression of the gene.
-It is a tightly controlled process and mis-regulation of APA can lead to 
-pathological effects to the cells, such as uncontrolled cell cycle and growth. 
+It is a tightly controlled process and mis-regulation of APA can affect many biological processed, such as uncontrolled cell cycle and growth. 
 Although several high throughput sequencing methods have been developed, 
-there are still limited data available.
+there are still limited data dedicated to identifying APA events.
 
-RNA-seq has become one of the most commonly used methods for quantifying
-genome-wide gene expression. There are massive RNA-seq datasets available
-in public databases such as GEO and TCGA. For this reason, we develop the 
-InPAS algorithm for identifying APA from conventional RNA-seq data.
+However, massive RNA-seq datasets, which were originally created to quantify
+genome-wide gene expression, are available in public databases such as GEO and TCGA. These RNA-seq datasets also contain information of genome-wide APA. Thus, we developed the InPAS algorithm for identifying APA from the conventional RNA-seq data.
 
 The workflow for InPAS is:
 
-- Calculate coverage from BEDGraph files
-- Identify putative pA sites based on the coverage changes 
-- Filter putative pA sites using cleanUpdTseq to remove false sites due to internal-priming.
-- Estimate alternative pA usage using the coverage for the predicted 3' UTR
-- Identify differential usage of APA in different samples leveraging Limma
+- Calculate genome-wide read coverage per sample from individual BEDGraph files  
+- Identify putative polyadenylation (pA) sites for each gene based on the read coverage fluctuation  
+- Filter putative pA sites using the cleanUpdTseq function to remove potential false pA sites due to oligo-dT-mediated internal priming (depends on the library construction protocol, not always necessary).  
+- Estimate alternative pA usage using the read coverage along the predicted 3' UTRs
+- Identify differential usage of APA between different conditions leveraging the limma package (Does read coverage approximately follows a normal distribution?) 
 
 # How to
 
 First, load the required libraries InPAS, species specific BSgenome, and TxDb as follows.
 
 ```{r loadLibrary}
-library(InPAS)
 library(BSgenome.Mmusculus.UCSC.mm10)
 library(TxDb.Mmusculus.UCSC.mm10.knownGene)
-path <- file.path(find.package("InPAS"), "extdata")
 ```
 
-Next, prepare annotation using the function `utr3Annotation` with a TxDb and org annotation.
+Next, extract 3' annotation using the function `utr3Annotation` from genome annotation databases: a TxDb database and an Ensembldb annotation for a species of interest.
 Please note that the 3' UTR annotation prepared by `utr3Annotation` 
-includes the gaps to the next annotated region.
+includes the gaps to the next downstream exon.
 
 ```{r prepareAnno}
-library(org.Hs.eg.db)
-samplefile <- system.file("extdata", "hg19_knownGene_sample.sqlite",
-            package="GenomicFeatures")
-txdb <- loadDb(samplefile)
-utr3.sample.anno <- utr3Annotation(txdb=txdb, 
-                   orgDbSYMBOL="org.Hs.egSYMBOL")
+if (!require("EnsDb.Hsapiens.v86"))
+{
+    BiocManager::install("EnsDb.Hsapiens.v86")
+}
+library("EnsDb.Hsapiens.v86")
+samplefile <- system.file("extdata", 
+                          "hg19_knownGene_sample.sqlite",
+                           package="GenomicFeatures")
+TxDb <- loadDb(samplefile)
+utr3.sample.anno <- 
+  utr3Annotation(TxDb = TxDb,
+                 edb = EnsDb.Hsapiens.v86,
+                 removeScaffolds = TRUE)
 utr3.sample.anno
 ```
 
@@ -93,35 +103,51 @@ The following scripts illustrate the function calls needed to perform the
 complete analysis using _InPAS_.
 
 ```{r step2HugeDataF}
-load(file.path(path, "polyA.rds"))
+# load the PWM for the AAUAAA polyadenylation site
+load(system.file("extdata", "polyA.rda", 
+                 package = "InPAS", 
+                 mustWork = TRUE))
 library(cleanUpdTSeq)
 data(classifier)
-bedgraphs <- c(file.path(path, "Baf3.extract.bedgraph"), 
-               file.path(path, "UM15.extract.bedgraph"))
+bedgraphs <- system.file("extdata",
+                         c("Baf3.extract.bedgraph",
+                           "UM15.extract.bedgraph"),
+                         package = "InPAS", 
+                         mustWork = TRUE)
 hugeData <- FALSE
 ##step1 Calculate coverage
 coverage <- coverageFromBedGraph(bedgraphs, 
-                                 tags=c("Baf3", "UM15"),
+                                 tags = c("Baf3", "UM15"),
                                  genome=BSgenome.Mmusculus.UCSC.mm10,
-                                 hugeData=hugeData)
+                                 removeScaffolds = TRUE,                               
+                                 hugeData = hugeData)
 
 ## we hope the coverage rate of should be greater than 0.75 in the expressed gene.
 ## which is used because the demo data is a subset of genome.
-coverageRate(coverage=coverage,
-             txdb=TxDb.Mmusculus.UCSC.mm10.knownGene,
-             genome=BSgenome.Mmusculus.UCSC.mm10,
-             which = GRanges("chr6", ranges=IRanges(98013000, 140678000)))
+if (!requireNamespace("EnsDb.Mmusculus.v79", quietly = TRUE))
+  BiocManager::install("EnsDb.Mmusculus.v79")
+library("EnsDb.Mmusculus.v79")
+edb <- EnsDb.Mmusculus.v79
+coverageRate(
+  coverage = coverage,
+  edb = edb,
+  TxDb = TxDb.Mmusculus.UCSC.mm10.knownGene,
+  genome = BSgenome.Mmusculus.UCSC.mm10,
+  removeScaffolds = TRUE,
+  which = GRanges("chr6",
+                  ranges = IRanges(98013000, 140678000)))
 
 ##step2 Predict cleavage sites
 CPs <- CPsites(coverage=coverage, 
+               groupList =  NULL,
                genome=BSgenome.Mmusculus.UCSC.mm10,
                utr3=utr3.mm10, 
                search_point_START=200, 
                cutEnd=.2, 
                long_coverage_threshold=3,
                background="10K",
-               txdb=TxDb.Mmusculus.UCSC.mm10.knownGene,
-               PolyA_PWM=pwm, 
+               TxDb = TxDb.Mmusculus.UCSC.mm10.knownGene,
+               PolyA_PWM = pwm, 
                classifier=classifier,
                shift_range=50,
                step=10)
@@ -148,14 +174,15 @@ The steps described above can be done in one function call.
 
 ```{r OneStep}
 if(interactive()){
-    res <- inPAS(bedgraphs=bedgraphs, tags=c("Baf3", "UM15"), 
+    res <- InPASWrapper(bedgraphs=bedgraphs, tags=c("Baf3", "UM15"), 
               genome=BSgenome.Mmusculus.UCSC.mm10, 
               utr3=utr3.mm10, gp1="Baf3", gp2="UM15",
-              txdb=TxDb.Mmusculus.UCSC.mm10.knownGene,
+              TxDb = TxDb.Mmusculus.UCSC.mm10.knownGene,
               search_point_START=200,
               short_coverage_threshold=15,
               long_coverage_threshold=3, 
-              cutStart=0, cutEnd=.2, 
+              cutStart=0, cutEnd=.2,
+              removeScaffolds = TRUE,
               hugeData=FALSE,
               shift_range=50,
               PolyA_PWM=pwm, classifier=classifier,
@@ -169,13 +196,14 @@ if(interactive()){
 InPAS can also handle single group data.
 
 ```{r SingleGroupData}
-inPAS(bedgraphs=bedgraphs[1], tags=c("Baf3"), 
+InPASWrapper(bedgraphs=bedgraphs[1], tags=c("Baf3"), 
       genome=BSgenome.Mmusculus.UCSC.mm10, 
-      utr3=utr3.mm10, gp1="Baf3", gp2=NULL,
-      txdb=TxDb.Mmusculus.UCSC.mm10.knownGene,
+      utr3= utr3.mm10, gp1="Baf3", gp2=NULL,
+      TxDb=TxDb.Mmusculus.UCSC.mm10.knownGene,
       search_point_START=200,
       short_coverage_threshold=15,
       long_coverage_threshold=3, 
+      removeScaffolds = TRUE,
       cutStart=0, cutEnd=.2, 
       hugeData=FALSE, 
       PolyA_PWM=pwm, classifier=classifier,

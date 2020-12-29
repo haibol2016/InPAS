@@ -1,12 +1,12 @@
 Package: InPAS
-Type: Package
-Title: InPAS: a bioconductor package for the identification of novel alternative PolyAdenylation Sites (PAS) using RNA-seq data
-Version: 1.21.0
-Authors@R: c(person("Jianhong Ou", "Developer", role = c("aut", "cre"),
-        email = "jianhong.ou@duke.edu"), person("Lihua Julie Zhu",
-        "Developer", role = "aut", email = "Julie.Zhu@umassmed.edu"))
-Author: Jianhong Ou, Sungmi M. Park, Michael R. Green and Lihua Julie Zhu
-Maintainer: Jianhong Ou <jianhong.ou@duke.edu>, 
+Title: A Bioconductor package for the identification of novel Alternative PolyAdenylation Sites (PAS) based on RNA-seq data
+Version: 1.22.0
+Authors@R: c(person("Jianhong", "Ou", role = c("aut", "cre"), email = "jianhong.ou@duke.edu"), 
+             person("Haibo", "Liu", role = "aut", email = "haibo.liu@umassmed.edu"),
+             person("Lihua Julie", "Zhu", role = c("aut", "cre"), email = "Julie.Zhu@umassmed.edu"))
+Author: Jianhong Ou, Haibo Liu, Sungmi M. Park, 
+        Michael R. Green and Lihua Julie Zhu
+Maintainer: Jianhong Ou <jianhong.ou@duke.edu>,
             Lihua Julie Zhu <Julie.Zhu@umassmed.edu>
 Description: Alternative polyadenylation (APA) is one of the important post-transcriptional 
              regulation mechanisms which occurs in most human genes. InPAS facilitates the
@@ -17,13 +17,22 @@ biocViews: RNASeq, Sequencing, AlternativeSplicing, Coverage,
         DifferentialSplicing, GeneRegulation, Transcription,
         ImmunoOncology
 License: GPL (>= 2)
-Lazyload: yes
-Imports: AnnotationDbi, BSgenome, cleanUpdTSeq, Gviz, seqinr, preprocessCore, 
-        IRanges, GenomeInfoDb, depmixS4, limma, BiocParallel
+Imports: AnnotationDbi, BSgenome, cleanUpdTSeq, preprocessCore, 
+        IRanges, GenomeInfoDb, depmixS4, limma, BiocParallel, 
+	Biostrings, dplyr, magrittr, plyranges, readr
 Depends: R (>= 3.1), methods, Biobase, GenomicRanges, GenomicFeatures,
         S4Vectors
-Suggests: RUnit, BiocGenerics, BiocStyle, BSgenome.Hsapiens.UCSC.hg19,
-        BSgenome.Mmusculus.UCSC.mm10, org.Hs.eg.db, org.Mm.eg.db,
+Suggests: RUnit, BiocGenerics, 
+        BiocManager, rtracklayer,
+        BiocStyle, knitr,
+        EnsDb.Hsapiens.v86,
+        EnsDb.Mmusculus.v79,
+        BSgenome.Hsapiens.UCSC.hg19,
+        BSgenome.Mmusculus.UCSC.mm10,
         TxDb.Hsapiens.UCSC.hg19.knownGene,
-        TxDb.Mmusculus.UCSC.mm10.knownGene, rtracklayer, knitr
+        TxDb.Mmusculus.UCSC.mm10.knownGene
 VignetteBuilder: knitr
+RoxygenNote: 7.1.1
+Roxygen: list(markdown = TRUE)
+LazyData: true
+Encoding: UTF-8

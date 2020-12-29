@@ -1,40 +1,112 @@
-testUsage <- function(CPsites, coverage, genome, utr3, BPPARAM=NULL, 
-                      method=c("limma", 
-                                "fisher.exact", 
-                                "singleSample", 
-                                "singleGroup"),
-                      normalize=c("none", "quantiles", "quantiles.robust",
-                               "mean", "median"),
-                      design, contrast.matrix, coef=1, robust=FALSE, ..., 
-                      gp1, gp2){
-    stopifnot(length(CPsites)>0 && is(CPsites, "GRanges"))
-    stopifnot(length(coverage)>0)
-    method <- match.arg(method)
-    normalize <- match.arg(normalize)
-    res <- NULL
-    eset <- list()
-    if(method!="singleSample"){
-        eset <- getUTR3eSet(CPsites, coverage, genome, utr3, normalize, BPPARAM=BPPARAM)
-        if(method=="limma"){
-            if(missing(design)||missing(contrast.matrix)){
-                stop("desing and contrast.matrix is required.")
-            }
-            res <- limmaAnalyze(eset, design, contrast.matrix, coef=coef, robust=FALSE, ...)
-        }
-        if(method=="fisher.exact"){
-            if(missing(gp1)||missing(gp2)){
-                stop("gp1 and gp2 is required.")
-            }
-            res <- 
-                fisher.exact.test(eset, gp1=gp1, gp2=gp2)
-        }
-        if(method=="singleGroup"){
-            res <- singleGroupAnalyze(eset)
-        }
-    }else{
-        eset <- getUTR3eSet(CPsites, coverage, genome, utr3, BPPARAM=BPPARAM, singleSample=TRUE)
-        res <- singleSampleAnalyze(eset)
+#' do test for dPDUI
+#'
+#' do test for dPDUI
+#' @param CPsites outputs of [CPsites()]
+#' @param coverage coverage for each sample, outputs of [coverageFromBedGraph()]
+#' @param genome an object of [BSgenome::BSgenome-class]
+#' @param utr3 output of [utr3Annotation()]
+#' @param BPPARAM an optional [BiocParallel::BiocParallelParam-class] instance
+#'   determining the parallel back-end to be used during evaluation, or a list
+#'   of BiocParallelParam instances, to be applied in sequence for nested calls
+#'   to bplapply.
+#' @param method the test method. see [singleSampleAnalysis()],
+#'   [singleGroupAnalysis()],[fisherExactTest()], [limmaAnalysis()]
+#' @param normalize the normalization method
+#' @param design a design matrix of the experiment, with rows corresponding to
+#'   arrays and columns to coefficients to be estimated. Defaults to the unit
+#'   vector meaning that the arrays are treated as replicates. see
+#'   [stats::model.matrix()].
+#' @param contrast.matrix a numeric matrix with rows corresponding to
+#'   coefficients in fit and columns containing contrasts. May be a vector if
+#'   there is only one contrast. see [limma::makeContrasts()]
+#' @param coef column number or column name specifying which coefficient or
+#'   contrast of the linear model is of interest. see more [limma::topTable()].
+#'   default value: 1
+#' @param robust logical, should the estimation of the empirical Bayes prior
+#'   parameters be robustified against outlier sample variances?
+#' @param ... other arguments are passed to lmFit
+#' @param gp1 tag names involved in group 1
+#' @param gp2 tag names involved in group 2
+#'
+#' @return a list with test results in a matrix.
+#' @details if method is "limma", design matrix and contrast is required. if
+#'   method is "fisher.exact", gp1 and gp2 is required.
+#' @export
+#' @seealso [singleSampleAnalysis()], [singleGroupAnalysis()],
+#'   [fisherExactTest()], [limmaAnalysis()]
+#' @examples
+#' library(limma)
+#' path <- system.file("extdata", package = "InPAS")
+#' load(file.path(path, "CPs.MAQC.rda"))
+#' load(file.path(path, "coverage.MAQC.rda"))
+#' library(BSgenome.Hsapiens.UCSC.hg19)
+#' data(utr3.hg19)
+#' tags <- names(coverage)
+#' g <- factor(gsub("\\..*$", "", tags))
+#' design <- model.matrix(~ -1 + g)
+#' colnames(design) <- c("Brain", "UHR")
+#' contrast.matrix <- makeContrasts(contrasts = "Brain-UHR", levels = design)
+#' res <- testUsage(
+#'   CPsites = CPs,
+#'   coverage = coverage,
+#'   genome = BSgenome.Hsapiens.UCSC.hg19,
+#'   utr3 = utr3.hg19,
+#'   method = "limma",
+#'   design = design,
+#'   contrast.matrix = contrast.matrix
+#' )
+testUsage <- function(CPsites, coverage, genome,
+                      utr3, BPPARAM = NULL,
+                      method = c(
+                        "limma",
+                        "fisher.exact",
+                        "singleSample",
+                        "singleGroup"
+                      ),
+                      normalize = c(
+                        "none", "quantiles",
+                        "quantiles.robust",
+                        "mean", "median"
+                      ),
+                      design, contrast.matrix,
+                      coef = 1, robust = FALSE, ...,
+                      gp1, gp2) {
+  stopifnot(length(CPsites) > 0 && is(CPsites, "GRanges"))
+  stopifnot(length(coverage) > 0)
+  method <- match.arg(method)
+  normalize <- match.arg(normalize)
+  res <- NULL
+  eset <- list()
+  if (method != "singleSample") {
+    eset <- getUTR3eSet(CPsites, coverage, genome,
+      utr3, normalize,
+      BPPARAM = BPPARAM
+    )
+    if (method == "limma") {
+      if (missing(design) || missing(contrast.matrix)) {
+        stop("design and contrast.matrix are required.")
+      }
+      res <- limmaAnalysis(eset, design, contrast.matrix,
+        coef = coef, robust = FALSE, ...
+      )
     }
-    eset$testRes <- res
-    return(eset)
+    if (method == "fisher.exact") {
+      if (missing(gp1) || missing(gp2)) {
+        stop("gp1 and gp2 are required.")
+      }
+      res <- fisherExactTest(eset, gp1 = gp1, gp2 = gp2)
+    }
+    if (method == "singleGroup") {
+      res <- singleGroupAnalysis(eset)
+    }
+  } else {
+    eset <- getUTR3eSet(CPsites, coverage, genome,
+      utr3,
+      BPPARAM = BPPARAM,
+      singleSample = TRUE
+    )
+    res <- singleSampleAnalysis(eset)
+  }
+  eset$testRes <- res
+  return(eset)
 }
