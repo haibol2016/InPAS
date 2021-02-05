@@ -1,7 +1,5 @@
 #' search proximal CPsites
 #'
-#' search proximal CPsites
-#'
 #' @param CPs output from [searchDistalCPs()] or [distalAdj()]
 #' @param curr_UTR GRanges for current 3' UTR
 #' @param window_size window size
@@ -35,8 +33,7 @@ searchProximalCPs <- function(CPs, curr_UTR,
   dCPs$length[flag] <- dCPs$length[flag] + dCPs$distalCP[flag]
   dCPs$type <- ifelse(flag, "novel distal", "novel proximal")
   dCPs$type[grepl("proximalCP", dCPs$annotatedProximalCP) &
-    !flag] <-
-    "annotated proximal"
+    !flag] <- "annotated proximal"
   dist_apa <- function(d, id) {
     ifelse(id > 0, as.numeric(rownames(d)[id]), 0)
   }
@@ -72,15 +69,11 @@ searchProximalCPs <- function(CPs, curr_UTR,
     if (cutEnd < 1) {
       chr.cov.merge <- lapply(chr.cov.merge, function(.ele) {
         .ele[1:floor((nrow(.ele) - 1) * (1 - cutEnd)), ,
-          drop = FALSE
-        ]
-      })
+          drop = FALSE]})
     } else {
       chr.cov.merge <- lapply(chr.cov.merge, function(.ele) {
         .ele[1:max(nrow(.ele) - 1 - floor(cutEnd), 1), ,
-          drop = FALSE
-        ]
-      })
+          drop = FALSE]})
     }
   }
 
@@ -121,7 +114,7 @@ searchProximalCPs <- function(CPs, curr_UTR,
     SIMPLIFY = FALSE
     )
   if (two_way) {
-    ## reverse
+    ## reverse direction search
     fit_value_rev[flag] <- mapply(function(.ele, search_point_END) {
       nr <- nrow(.ele)
       fos <- apply(.ele[nr:1, , drop = FALSE], 2, optimalSegmentation,
@@ -132,6 +125,7 @@ searchProximalCPs <- function(CPs, curr_UTR,
       cov_diff <- rowMeans(cov_diff)
       cov_diff <- cov_diff[length(cov_diff):1]
     }, chr.cov.merge[flag], search_point_end[flag], SIMPLIFY = FALSE)
+    
     Predicted_Proximal_APA_rev[flag] <-
       mapply(function(cov_diff, search_point_END, savedID) {
         idx <- valley(cov_diff, search_point_START,
@@ -142,9 +136,10 @@ searchProximalCPs <- function(CPs, curr_UTR,
           idx <- idx[idx != search_point_START]
         }
         idx
-      }, fit_value_rev[flag], search_point_end[flag], saved.id[flag],
-      SIMPLIFY = FALSE
+      }, fit_value_rev[flag], search_point_end[flag], 
+      saved.id[flag], SIMPLIFY = FALSE
       )
+    
     ## combine forward and reverse
     Predicted_Proximal_APA[flag] <-
       mapply(function(fv, idx, fv_rev, idx_rev) {

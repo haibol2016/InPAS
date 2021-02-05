@@ -11,10 +11,9 @@
 #' @param utr3 output of utr3Annotation
 #' @param TxDb an object of [GenomicFeatures::TxDb-class]
 #' @param tags the names for each input bedgraphs
-#' @param hugeData is s this dataset consume too much memory? if it is TRUE, the
+#' @param hugeData is this dataset consume too much memory? if it is TRUE, the
 #'   coverage will be saved into tempfiles.
-#' @param ... parameters can be passed into tempfile. This is useful when you
-#'   submit huge dataset to cluster.
+#' @param tmpfolder directory for storing intermediate files for huge data.
 #' @param gp1 tag names involved in group 1
 #' @param gp2 tag names involved in group 2
 #' @param window_size window size for novel distal position searching and
@@ -81,14 +80,16 @@
 #'   bedgraphs <- file.path(path, "Baf3.extract.bedgraph")
 #'   data(utr3.mm10)
 #'   res <- InPASWrapper(
-#'     bedgraphs = bedgraphs, tags = c("Baf3"),
+#'     bedgraphs = bedgraphs, 
+#'     tags = c("Baf3"),
 #'     genome = BSgenome.Mmusculus.UCSC.mm10,
 #'     removeScaffolds = TRUE,
 #'     method = "singleSample",
-#'     utr3 = utr3.mm10, gp1 = "Baf3", gp2 = NULL,
+#'     utr3 = utr3.mm10, 
+#'     gp1 = "Baf3", gp2 = NULL,
 #'     TxDb = TxDb.Mmusculus.UCSC.mm10.knownGene,
 #'     search_point_START = 200,
-#'     short_coverage_threshold = 15,
+#'     coverage_threshold = 15,
 #'     long_coverage_threshold = 3,
 #'     cutStart = 0, cutEnd = .2,
 #'     hugeData = FALSE
@@ -99,7 +100,8 @@ InPASWrapper <- function(bedgraphs,
                          genome,
                          removeScaffolds = FALSE,
                          utr3, TxDb = NA,
-                         tags, hugeData = FALSE, ...,
+                         tags, hugeData = FALSE, 
+                         tmpfolder,
                          gp1, gp2,
                          window_size = 100,
                          search_point_START = 50,
@@ -174,7 +176,10 @@ InPASWrapper <- function(bedgraphs,
     !all(utr3$feature %in% c("utr3", "next.exon.gap", "CDS"))) {
     stop("utr3 must be output of function of utr3Annotation")
   }
-
+  if (hugeData && missing(tmpfolder)){
+    stop("An explicit directory is required for huge data")
+  }
+  
   if (length(gp2) < 1 | length(gp1) < 1) {
     samples <- unlist(groupList)
     samples <- samples[!is.na(samples)]
@@ -197,7 +202,9 @@ InPASWrapper <- function(bedgraphs,
       tags,
       genome,
       removeScaffolds = removeScaffolds,
-      hugeData = hugeData, ...
+      hugeData = hugeData, 
+      BPPARAM = BPPARAM, 
+      tmpdir = tmpfolder
     )
 
   ## step2 predict CPsites
@@ -218,7 +225,9 @@ InPASWrapper <- function(bedgraphs,
     PolyA_PWM = PolyA_PWM,
     classifier = classifier,
     classifier_cutoff = classifier_cutoff,
-    shift_range = shift_range, BPPARAM = BPPARAM
+    shift_range = shift_range, 
+    BPPARAM = BPPARAM,
+    tmpfolder = tmpfolder
   )
 
   ## step3 calculate usage
@@ -232,7 +241,8 @@ InPASWrapper <- function(bedgraphs,
     design = design,
     contrast.matrix = contrast.matrix,
     coef = coef,
-    gp1 = gp1, gp2 = gp2
+    gp1 = gp1,
+    gp2 = gp2
   )
 
   if (hugeData) {

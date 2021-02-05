@@ -59,7 +59,7 @@ NOtest_searchDistalCPs <- function() {
   CP <- CPsites(
     coverage = coverage, genome = genome,
     utr3 = utr3, coverage_threshold = 5,
-    long_coverage_threshold = 5
+    long_coverage_threshold = 5,
   )
   checkCPs(CP, 399, 1000, "novel distal")
 
@@ -132,7 +132,8 @@ test_CPsites_utr3Usage <- function() {
   CP <- CPsites(
     coverage = coverage, genome = genome,
     utr3 = utr3, coverage_threshold = 5,
-    long_coverage_threshold = 5
+    long_coverage_threshold = 5,
+    tmpfolder = tempdir()
   )
   checkCPs(CP, 399, 1000, "novel distal")
 
@@ -154,8 +155,11 @@ test_CPsites_utr3Usage <- function() {
     hugeData = FALSE
   )
   CP <- CPsites(
-    coverage = coverage, genome = genome,
-    utr3 = utr3, coverage_threshold = 5, long_coverage_threshold = 5
+    coverage = coverage,
+    genome = genome,
+    utr3 = utr3, coverage_threshold = 5, 
+    long_coverage_threshold = 5,
+    tmpfolder = tempdir()
   )
   checkCPs(CP, 399, 1000, "novel distal")
 

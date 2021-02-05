@@ -7,33 +7,42 @@
 estimateCPsites(
   chr.cov,
   utr3,
-  MINSIZE,
+  background,
+  z2s,
+  depth.weight,
+  genome,
+  MINSIZE = 10,
   window_size,
   search_point_START,
   search_point_END,
   cutStart,
   cutEnd,
   adjust_distal_polyA_end,
-  background,
-  z2s,
   coverage_threshold,
   long_coverage_threshold,
   PolyA_PWM,
   classifier,
   classifier_cutoff,
   shift_range,
-  depth.weight,
-  genome,
   step = 1,
   two_way = FALSE,
+  hugeData = TRUE,
   tmpfolder = NULL,
-  silence = TRUE
+  silence = FALSE
 )
 }
 \arguments{
 \item{chr.cov}{Coverage list for one chromosome}
 
 \item{utr3}{output of \code{\link[=utr3Annotation]{utr3Annotation()}}}
+
+\item{background}{how to get the local background}
+
+\item{z2s}{output of \code{\link[=zScoreThreshold]{zScoreThreshold()}}}
+
+\item{depth.weight}{output of \code{\link[=depthWeight]{depthWeight()}}}
+
+\item{genome}{A \link[BSgenome:BSgenome-class]{BSgenome::BSgenome} object}
 
 \item{MINSIZE}{min size of short form}
 
@@ -49,10 +58,6 @@ estimateCPsites(
 
 \item{adjust_distal_polyA_end}{adjust distal site or not}
 
-\item{background}{how to get the local background}
-
-\item{z2s}{output of \code{\link[=zScoreThreshold]{zScoreThreshold()}}}
-
 \item{coverage_threshold}{cutoff value for coverage}
 
 \item{long_coverage_threshold}{cutoff value for long form}
@@ -65,14 +70,13 @@ estimateCPsites(
 
 \item{shift_range}{shift range}
 
-\item{depth.weight}{output of \code{\link[=depthWeight]{depthWeight()}}}
-
-\item{genome}{A \link[BSgenome:BSgenome-class]{BSgenome::BSgenome} object}
-
 \item{step}{Adjust step, default 1, means adjust by each base by
 cleanUpdTSeq.}
 
 \item{two_way}{Search the proximal site from both direction or not}
+
+\item{hugeData}{logical(1). Is this dataset consume too much memory? if it is
+TRUE, the coverage will be saved into temporary files.}
 
 \item{tmpfolder}{temp folder could save and reload the analysis data for
 resume analysis}

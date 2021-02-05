@@ -19,13 +19,13 @@ zScoreThreshold <- function(background,
   if (background == "same_as_long_coverage_threshold") {
     return(0)
   }
-
+  
   if (length(introns) < 1) { ## no nearby intron for background estimate
     return(0)
   }
-
+  
   curr_range <- utr3[utr3$feature == "utr3"]
-
+  
   seqnames <- unlist(sapply(totalCov, names))
   seqnames <- table(seqnames)
   seqnames <- names(seqnames)[seqnames == length(totalCov)]
@@ -33,22 +33,22 @@ zScoreThreshold <- function(background,
     as.character(seqnames(curr_range)),
     seqnames
   ))
-
+  
   background <- switch(background,
-    "1K" = 1000,
-    "5K" = 5000,
-    "10K" = 10000,
-    "50K" = 50000,
-    1000
+                       "1K" = 1000,
+                       "5K" = 5000,
+                       "10K" = 10000,
+                       "50K" = 50000,
+                       1000
   )
-
+  
   curr_str <- as.character(strand(curr_range)) == "+"
   start(curr_range) <- ifelse(curr_str,
-    start(curr_range) - background - 1,
-    end(curr_range)
+                              start(curr_range) - background - 1,
+                              end(curr_range)
   )
   width(curr_range) <- background
-
+  
   curr_range <- curr_range[seqnames(curr_range) %in% seqnames]
   introns <- introns[seqnames(introns) %in% seqnames]
   ol <- findOverlaps(curr_range, introns)
@@ -57,7 +57,7 @@ zScoreThreshold <- function(background,
   }
   introns <- introns[subjectHits(ol)]
   introns$id <- names(curr_range)[queryHits(ol)]
-
+  
   cov <- list()
   for (seq in seqnames) {
     cov[[seq]] <- list()
@@ -65,33 +65,43 @@ zScoreThreshold <- function(background,
       cov[[seq]][[n]] <- totalCov[[n]][[seq]]
     }
   }
-
-  introns.s <- split(introns, as.character(seqnames(introns)))
+  
+  intron_containing_seqnames <- as.character(seqnames(introns))
+  introns.s <- split(introns, intron_containing_seqnames)
+  intron_containing_seqnames <- unique(intron_containing_seqnames)
+  
+  #no introns for some seqnames
   cvg <- mapply(function(.intron, .cov) {
     .cvg <-
       lapply(.cov, function(.cv) {
         .cv <- Views(.cv,
-          start = start(.intron),
-          end = end(.intron)
+                     start = start(.intron),
+                     end = end(.intron)
         )
         .cv <- viewApply(.cv, as.integer, simplify = FALSE)
       })
-    .cvg1 <- vector("list", length(.cvg))
-    for (i in 1:length(.cvg[[1]])) {
-      .cvg1[[i]] <- list()
+    
+    # cvg is a list of length(#number_sample) of  list of length(#number_introns) 
+    # correct Jianhong's bug here
+    .cvg1 <- vector("list", length(.cvg[[1]]))
+    for (k in seq_along(.cvg1))
+    {
+      .cvg1[[k]] <- list()
     }
+    
     for (i in names(.cvg)) {
-      for (j in 1:length(.cvg[[1]])) {
+      for (j in seq_along(.cvg[[1]])) {
         .cvg1[[j]][[i]] <- .cvg[[i]][[j]]
       }
     }
-    .cvg1 <- lapply(.cvg1, function(.ele) {
-      colSums(do.call(rbind, .ele))
+    .cvg1 <- lapply(.cvg1, function(.e) {
+      colSums(do.call("rbind", .e))
     })
     .intron$cvg <- .cvg1
     .intron
-  }, introns.s[seqnames], cov[seqnames], SIMPLIFY = FALSE)
-
+  }, introns.s[intron_containing_seqnames], 
+  cov[intron_containing_seqnames], SIMPLIFY = FALSE)
+  
   cvg <- unlist(GRangesList(cvg))
   cvg <- split(cvg$cvg, cvg$id)
   cvg <- sapply(cvg, function(.ele) {
@@ -106,7 +116,17 @@ zScoreThreshold <- function(background,
     ## z*std+mu < x
     z * std + mu ## assuming normal distribution
   })
+  
+  intronless_seqnames <- seqnames[!seqnames %in% intron_containing_seqnames]
+  if (length(intronless_seqnames)>0)
+  {
+    intronless_utr3 <- names(curr_range[seqnames(curr_range) %in% intronless_seqnames])
+    cvg_intronless <- rep(0, length(intronless_utr3))
+    names(cvg_intronless) <- intronless_utr3
+    cvg <- c(cvg, cvg_intronless)
+  }
   cvg <- cvg[match(names(curr_range), names(cvg))]
   names(cvg) <- names(curr_range)
+  cvg[is.nan(cvg)] <- 0
   cvg
 }

@@ -12,7 +12,7 @@ InPASWrapper(
   TxDb = NA,
   tags,
   hugeData = FALSE,
-  ...,
+  tmpfolder,
   gp1,
   gp2,
   window_size = 100,
@@ -55,11 +55,10 @@ from the genome}
 
 \item{tags}{the names for each input bedgraphs}
 
-\item{hugeData}{is s this dataset consume too much memory? if it is TRUE, the
+\item{hugeData}{is this dataset consume too much memory? if it is TRUE, the
 coverage will be saved into tempfiles.}
 
-\item{...}{parameters can be passed into tempfile. This is useful when you
-submit huge dataset to cluster.}
+\item{tmpfolder}{directory for storing intermediate files for huge data.}
 
 \item{gp1}{tag names involved in group 1}
 
@@ -151,14 +150,16 @@ if (interactive()) {
   bedgraphs <- file.path(path, "Baf3.extract.bedgraph")
   data(utr3.mm10)
   res <- InPASWrapper(
-    bedgraphs = bedgraphs, tags = c("Baf3"),
+    bedgraphs = bedgraphs, 
+    tags = c("Baf3"),
     genome = BSgenome.Mmusculus.UCSC.mm10,
     removeScaffolds = TRUE,
     method = "singleSample",
-    utr3 = utr3.mm10, gp1 = "Baf3", gp2 = NULL,
+    utr3 = utr3.mm10, 
+    gp1 = "Baf3", gp2 = NULL,
     TxDb = TxDb.Mmusculus.UCSC.mm10.knownGene,
     search_point_START = 200,
-    short_coverage_threshold = 15,
+    coverage_threshold = 15,
     long_coverage_threshold = 3,
     cutStart = 0, cutEnd = .2,
     hugeData = FALSE

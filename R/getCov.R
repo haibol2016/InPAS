@@ -19,6 +19,8 @@
 #' @importFrom IRanges IRanges quantile viewApply viewMeans quantile
 #' @importFrom magrittr %>%
 #' @seealso [coverageFromBedGraph()]
+#' 
+#' @keywords internal
 
 
 getCov <- function(bedgraph, genome,
@@ -31,21 +33,21 @@ getCov <- function(bedgraph, genome,
       col_names = FALSE, skip = 0,
       col_types = cols(
         X1 = col_factor(),
-        X2 = col_skip(),
-        X3 = col_skip(),
-        X4 = col_skip()
+        X2 = "-",
+        X3 = "-",
+        X4 = "-"
       )
     ))[, 1]
-
+  
   ## filter out scaffolds and mitochondrial genome if specified
   seqnames <- trimSeqnames(genome, removeScaffolds)
-
+  
   seqStyle <- seqlevelsStyle(genome)
   seqStyle.bed <- seqlevelsStyle(levels(seqnames.bedfile))
-
+  
   ## if seqlevel style different between BSgenome and bedgraph file,
   ## make them the same. This is not safe-proof.
-
+  
   if (!any(seqStyle.bed == seqStyle)) {
     message("seqlevelsStyle of genome is different from bedgraph file.")
     ## convert to seqStyled seqnames if matched, otherwise character_NA_: A names vector
@@ -67,58 +69,58 @@ getCov <- function(bedgraph, genome,
       bedgraph, "and genome"
     ))
   }
-
+  
   summaryFunction <- function(seqname) {
     seqL <- seqLen[seqname]
-
+    
     ## apply some trick here by using "FALSE"
     lines2read <- Rle(c(FALSE, seqnames.bedfile == seqname))
     true <- which(runValue(lines2read))
     skip <- runLength(lines2read)[true - 1]
     skip[1] <- skip[1] - 1
     nrow <- runLength(lines2read)[true]
-
+    
     ## To be efficient, sort the bedgraph by chromosomes first
     ## If bedgraph files are generated using bedtools genomecov,
     ## Then this is the case
     dat <- read_tsv(bedgraph,
-      comment = "#",
-      col_names = FALSE,
-      skip = skip[1],
-      n_max = nrow[1],
-      col_types = cols(
-        X1 = col_skip(),
-        X2 = col_integer(),
-        X3 = col_integer(),
-        X4 = col_integer()
-      )
+                    comment = "#",
+                    col_names = FALSE,
+                    skip = skip[1],
+                    n_max = nrow[1],
+                    col_types = cols(
+                      X1 = "-",
+                      X2 = "i",
+                      X3 = "i",
+                      X4 = "d"
+                    )
     )
-
+    
     if (length(true) > 1) {
       cul_skip <- skip[1] + nrow[1]
       for (i in 2:length(true)) {
         cul_skip <- cul_skip + skip[i]
         lines <-
           read_tsv(bedgraph,
-            comment = "#",
-            col_names = FALSE,
-            skip = cul_skip,
-            n_max = nrow[i],
-            col_types = cols(
-              X1 = col_skip(),
-              X2 = col_integer(),
-              X3 = col_integer(),
-              X4 = col_integer()
-            )
+                   comment = "#",
+                   col_names = FALSE,
+                   skip = cul_skip,
+                   n_max = nrow[i],
+                   col_types = cols(
+                     X1 = "-",
+                     X2 = "i",
+                     X3 = "i",
+                     X4 = "d"
+                   )
           )
         dat <- dplyr::bind_rows(dat, lines)
         cul_skip <- cul_skip + nrow[i]
       }
     }
-
+    
     # convert bedgraph 0-based index to 1-based index for GRanges
     dat <- dat %>% dplyr::mutate(X2 = X2 + 1)
-
+    
     ## convert uncovered regions as gaps
     ## This step can be avoided when generate bedgraph with bedtools:
     ## bedtools genomecov -bga -split -ibam  <coordinate-sorted BAM file>
@@ -131,7 +133,7 @@ getCov <- function(bedgraph, genome,
       )))
     if (nrow(gaps) > 0) {
       gaps <- dplyr::bind_cols(gaps[, 1:2],
-        V4 = rep(0, nrow(gaps))
+                               V4 = rep(0, nrow(gaps))
       )
       colnames(gaps) <- colnames(dat)
       dat <- dplyr::bind_rows(dat, gaps)

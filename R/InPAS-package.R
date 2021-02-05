@@ -21,5 +21,5 @@ globalVariables(c(
   "X3", "dup.group", "end.utr3.last",
   "exon_name", "exon_rank", "feature",
   "gene", "start.utr3.last", "transcript",
-  "truncated", "tx_name"
+  "truncated", "tx_name", ".env"
 ))

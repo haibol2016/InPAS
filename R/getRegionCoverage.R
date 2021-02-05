@@ -2,10 +2,13 @@
 #'
 #' calculate coverage for a given region
 #'
-#' @param chr chromosome
-#' @param utr3.regions.chr the GRanges of region to be extracted
+#' @param chr character(1), chromosome/scaffold name
+#' @param utr3.regions.chr An object of [GenomicRanges::GRangesList-class],
+#'   with a GRanges for a single seqname (chromosome/scaffold). It is an  
+#'   output from the [get3UTRCDSRegionsPerSeqname()] 
 #' @param hugeData is it a huge dataset?
-#' @param coverage output of coverageFromBedGraph
+#' @param coverage output of [coverageFromBedGraph()], a list of coverage file names 
+#'   or a list of coverage objects
 #' @param phmm prepare data for singleSample analysis?
 #'
 #' @return GRanges with coverage data
@@ -14,15 +17,15 @@
 #' @importClassesFrom IRanges IRanges
 #'
 
-
 getRegionCoverage <- function(chr, utr3.regions.chr,
-                              hugeData, coverage, phmm = FALSE) {
+                              hugeData, coverage, 
+                              phmm = FALSE) {
   view <- utr3.regions.chr[[chr]]
   end <- end(view)
   maxEnd <- max(end)
   if (hugeData) {
     .cov <- list()
-
+    
     if (phmm) all.tx <- list()
     for (i in 1:length(coverage)) {
       cvg <- NULL

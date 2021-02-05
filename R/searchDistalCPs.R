@@ -64,6 +64,8 @@ searchDistalCPs <- function(chr.cov.merge,
       next.exon.gap.split.diff <-
         log2(next.exon.gap.split[-1] + 0.01) -
         log2(next.exon.gap.split[-length(next.exon.gap.split)] + 0.01)
+      
+      #ratio greater than 30?
       id <- which(abs(next.exon.gap.split.diff) > log2(30))
       ### drop by background by window
       ## the gap == 2Xwindow size low coverage

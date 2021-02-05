@@ -99,7 +99,8 @@ coverageRate <- function(coverage, TxDb, edb, genome,
   tx <- parseTxDb(TxDb, edb, removeScaffolds = removeScaffolds)
   exon <- tx %>% plyranges::select(exon, feature, gene)
   UTR3 <- tx %>%
-    plyranges::filter(feature %in% c("lastutr3", "utr3"))
+    plyranges::filter(feature %in% c("lastutr3", "utr3")) %>%
+    plyranges::mutate(feature = "utr3")
 
   if (length(which) > 0) {
     ol <- GenomicRanges::findOverlaps(exon, which, ignore.strand = TRUE)
@@ -166,7 +167,7 @@ coverageRate <- function(coverage, TxDb, edb, genome,
   exon.cvg <- do.call(cbind, exon.cvg)
   exon.cvg.wid <- cbind(exon.cvg, gene.width = width(exon.unlist))
 
-  ## summary of exonic coverge and width per genes
+  ## summary of exonic coverage and width per genes
   gene.cvg <- rowsum(exon.cvg.wid, exon.unlist$gene, reorder = FALSE)
   gene.expd.rate <- gene.cvg[, -ncol(gene.cvg)] / gene.cvg[, ncol(gene.cvg)]
   gene.expd.rate <- gene.expd.rate > cutoff_expdGene_cvgRate
@@ -203,7 +204,7 @@ coverageRate <- function(coverage, TxDb, edb, genome,
   names(UTR3.cvg) <- names(coverage)
   UTR3.cvg <- do.call(cbind, UTR3.cvg)
   UTR3.cvg.rate <- colSums(UTR3.cvg) / sum(width(UTR3.unlist))
-  idx <- UTR3.unlist$gene_id %in% names(gene.expd.overall[gene.expd.overall])
+  idx <- UTR3.unlist$gene %in% names(gene.expd.overall[gene.expd.overall])
   if (sum(idx) > 0) {
     UTR3.cvg.rate.subsetBy.expd.gene <-
       colSums(UTR3.cvg[idx, , drop = FALSE]) / sum(width(UTR3.unlist[idx]))

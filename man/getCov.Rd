@@ -26,3 +26,4 @@ extract coverage from bedgraph file
 \seealso{
 \code{\link[=coverageFromBedGraph]{coverageFromBedGraph()}}
 }
+\keyword{internal}

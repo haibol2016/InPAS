@@ -13,7 +13,8 @@ getRegionCoverage(chr, utr3.regions.chr, hugeData, coverage, phmm = FALSE)
 
 \item{hugeData}{is it a huge dataset?}
 
-\item{coverage}{output of coverageFromBedGraph}
+\item{coverage}{output of coverageFromBedGraph, a list of coverage file names
+or a list of coverage objects}
 
 \item{phmm}{prepare data for singleSample analysis?}
 }

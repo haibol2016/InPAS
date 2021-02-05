@@ -16,8 +16,11 @@
 #' @import GenomicRanges BiocParallel
 #' @keywords internal
 
-lastCDSusage <- function(CDS, coverage, hugeData,
-                         BPPARAM = NULL, phmm = FALSE) {
+lastCDSusage <- function(CDS, coverage, 
+                         hugeData,
+                         BPPARAM = NULL, 
+                         phmm = FALSE) {
+  
   CDS.regions.chr <- split(CDS, as.character(seqnames(CDS)))
   seqnames <- names(CDS.regions.chr)
   if (!is.null(BPPARAM)) {

@@ -16,13 +16,15 @@
 #' @import BiocParallel
 #' @keywords internal
 
-mergeCoverage <- function(coverage, groupList,
-                          genome, removeScaffolds = FALSE,
+mergeCoverage <- function(coverage, 
+                          groupList,
+                          genome, 
+                          removeScaffolds = FALSE,
                           BPPARAM = NULL) {
   seqnames <- trimSeqnames(genome, removeScaffolds = removeScaffolds)
   seqLen <- seqLen(genome, removeScaffolds = removeScaffolds)
   seqRle <- list()
-  for (i in 1:length(seqnames)) {
+  for (i in seq_along(seqnames)) {
     seqRle[[seqnames[i]]] <- Rle(0, seqLen[i])
   }
 
@@ -55,7 +57,6 @@ mergeCoverage <- function(coverage, groupList,
             cvg <- NULL
             load(.ele)
             cvg <- cvg[seqnames]
-            names(cvg) <- seqnames
             idx <- sapply(cvg, is.null)
             cvg[idx] <- seqRle[idx]
             cvg

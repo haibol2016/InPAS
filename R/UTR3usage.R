@@ -30,27 +30,51 @@ UTR3usage <- function(CPsites, coverage, hugeData,
   ## step1 prepare the short and long utr3 regions
   utr3.trans.shorten.UTR <- split(CPsites, CPsites$transcript)
   if (!is.null(BPPARAM)) {
-    utr3.regions <- bplapply(utr3.trans.shorten.UTR,
+    utr3.regions <- bptry(bplapply(utr3.trans.shorten.UTR,
       getUTR3region,
       BPPARAM = BPPARAM
-    )
+    ))
+    while (!all(bpok(utr3.regions))) {
+      utr3.regions <- bptry(bplapply(utr3.trans.shorten.UTR,
+                                     getUTR3region,
+                                     BPREDO = utr3.regions,
+                                     BPPARAM = BPPARAM
+      ))
+    }
   } else {
     utr3.regions <- lapply(utr3.trans.shorten.UTR, getUTR3region)
   }
   utr3.regions <- unlist(GRangesList(utr3.regions))
+  
   ## step2, calculate coverage and merge into a matrix for long and short
   utr3.regions.chr <- split(utr3.regions, as.character(seqnames(utr3.regions)))
   utr3.regions.chr <- utr3.regions.chr[seqnames]
   if (!is.null(BPPARAM)) {
-    utr3.regions.chr <- bplapply(seqnames, getRegionCoverage,
-      BPPARAM = BPPARAM,
+    utr3.regions.chr <-  
+      bptry(bplapply(seqnames, 
+      getRegionCoverage,
       utr3.regions.chr = utr3.regions.chr,
       hugeData = hugeData,
       coverage = coverage,
-      phmm = phmm
-    )
+      phmm = phmm,
+      BPPARAM = BPPARAM
+    ))
+    
+    while (!all(bpok(utr3.regions.chr))) {
+      utr3.regions.chr <- 
+        bptry(bplapply(seqnames, 
+                       getRegionCoverage,
+                       utr3.regions.chr = utr3.regions.chr,
+                       hugeData = hugeData,
+                       coverage = coverage,
+                       phmm = phmm,
+                       BPREDO = utr3.regions.chr,
+                       BPPARAM = BPPARAM
+      ))
+    }  
   } else {
-    utr3.regions.chr <- lapply(seqnames, getRegionCoverage,
+    utr3.regions.chr <- lapply(seqnames, 
+      getRegionCoverage,
       utr3.regions.chr = utr3.regions.chr,
       hugeData = hugeData,
       coverage = coverage,

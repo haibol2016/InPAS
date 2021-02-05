@@ -24,7 +24,7 @@ distalAdj(
 
 \item{genome}{a \link[BSgenome:BSgenome-class]{BSgenome::BSgenome} object}
 
-\item{step}{adjust step, default 1, means adjust by each base by
+\item{step}{adjusting step, default 1, means adjusting by each base by
 cleanUpdTSeq.}
 }
 \description{

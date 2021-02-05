@@ -117,9 +117,8 @@ bedgraphs <- system.file("extdata",
 hugeData <- FALSE
 ##step1 Calculate coverage
 coverage <- coverageFromBedGraph(bedgraphs, 
-                                 tags = c("Baf3", "UM15"),
-                                 genome=BSgenome.Mmusculus.UCSC.mm10,
-                                 removeScaffolds = TRUE,                               
+                                 tags = c("Baf3", "UM15"),                                      genome=BSgenome.Mmusculus.UCSC.mm10,
+                                 removeScaffolds = TRUE,
                                  hugeData = hugeData)
 
 ## we hope the coverage rate of should be greater than 0.75 in the expressed gene.
@@ -128,7 +127,7 @@ if (!requireNamespace("EnsDb.Mmusculus.v79", quietly = TRUE))
   BiocManager::install("EnsDb.Mmusculus.v79")
 library("EnsDb.Mmusculus.v79")
 edb <- EnsDb.Mmusculus.v79
-coverageRate(
+covRate <- coverageRate(
   coverage = coverage,
   edb = edb,
   TxDb = TxDb.Mmusculus.UCSC.mm10.knownGene,
@@ -136,6 +135,7 @@ coverageRate(
   removeScaffolds = TRUE,
   which = GRanges("chr6",
                   ranges = IRanges(98013000, 140678000)))
+print(covRate)
 
 ##step2 Predict cleavage sites
 CPs <- CPsites(coverage=coverage, 
@@ -150,7 +150,8 @@ CPs <- CPsites(coverage=coverage,
                PolyA_PWM = pwm, 
                classifier=classifier,
                shift_range=50,
-               step=10)
+               step=10,
+               tmpfolder = tempdir())
 head(CPs)
 ##step3 Estimate 3UTR usage
 res <- testUsage(CPsites=CPs, 
@@ -174,21 +175,24 @@ The steps described above can be done in one function call.
 
 ```{r OneStep}
 if(interactive()){
-    res <- InPASWrapper(bedgraphs=bedgraphs, tags=c("Baf3", "UM15"), 
+    res <- InPASWrapper(bedgraphs=bedgraphs, 
+                        tags=c("Baf3", "UM15"), 
               genome=BSgenome.Mmusculus.UCSC.mm10, 
               utr3=utr3.mm10, gp1="Baf3", gp2="UM15",
               TxDb = TxDb.Mmusculus.UCSC.mm10.knownGene,
               search_point_START=200,
-              short_coverage_threshold=15,
+              coverage_threshold=15,
               long_coverage_threshold=3, 
               cutStart=0, cutEnd=.2,
               removeScaffolds = TRUE,
               hugeData=FALSE,
+              tmpfolder = tempdir(),
               shift_range=50,
-              PolyA_PWM=pwm, classifier=classifier,
+              PolyA_PWM=pwm, 
+              classifier=classifier,
               method="fisher.exact",
               adj.P.Val_cutoff=0.05,
-              dPDUI_cutoff=0.3, 
+              dPDUI_cutoff=0.3,
               PDUI_logFC_cutoff=0.59)
 }
 ```
@@ -196,20 +200,21 @@ if(interactive()){
 InPAS can also handle single group data.
 
 ```{r SingleGroupData}
-InPASWrapper(bedgraphs=bedgraphs[1], tags=c("Baf3"), 
+res <- InPASWrapper(bedgraphs=bedgraphs[1], 
+                    tags=c("Baf3"), 
       genome=BSgenome.Mmusculus.UCSC.mm10, 
       utr3= utr3.mm10, gp1="Baf3", gp2=NULL,
       TxDb=TxDb.Mmusculus.UCSC.mm10.knownGene,
       search_point_START=200,
-      short_coverage_threshold=15,
+      coverage_threshold=15,
       long_coverage_threshold=3, 
       removeScaffolds = TRUE,
       cutStart=0, cutEnd=.2, 
-      hugeData=FALSE, 
+      hugeData=FALSE,
+      tmpfolder = tempdir(),
       PolyA_PWM=pwm, classifier=classifier,
       method="singleSample",
-      adj.P.Val_cutoff=0.05,
-      step=10)
+      adj.P.Val_cutoff=0.05)
 ```
 
 # Session Info

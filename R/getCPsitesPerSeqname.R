@@ -288,13 +288,29 @@ estimateCPsites <- function(chr.cov,
   } else {
     chr.abun <- NULL
   }
-  if (hugeData)
-  {
-    saveRDS(chr.abun, file = 
-              file.path(tmpfolder, 
-                        paste(seqn, "CPsites", sep = "_")))
-    return(NULL)
+  
+  if (!is.null(chr.abun)){
+    utr3.shorten.UTR <- utr3 %>%
+      plyranges::filter(feature == "utr3") %>%
+      plyranges::select(-c(feature)) %>%
+      plyranges::filter(transcript %in%
+                          rownames(chr.abun))
+    
+    chr.abun <-
+      chr.abun[utr3.shorten.UTR$transcript, , drop = FALSE]
+    
+    utr3.shorten.UTR$fit_value <- unlist(chr.abun[, "fit_value"])
+    utr3.shorten.UTR$Predicted_Proximal_APA <-
+      unlist(chr.abun[, "Predicted_Proximal_APA"])
+    utr3.shorten.UTR$Predicted_Distal_APA <-
+      unlist(chr.abun[, "Predicted_Distal_APA"])
+    utr3.shorten.UTR$type <- unlist(chr.abun[, "type"])
+    utr3.shorten.UTR$utr3start <- unlist(chr.abun[, "utr3start"])
+    utr3.shorten.UTR$utr3end <- unlist(chr.abun[, "utr3end"])
+    utr3.shorten.UTR <-
+      utr3.shorten.UTR[!is.na(utr3.shorten.UTR$Predicted_Proximal_APA)]
   } else {
-    return(chr.abun)
+    utr3.shorten.UTR <- NULL
   }
+  utr3.shorten.UTR
 }

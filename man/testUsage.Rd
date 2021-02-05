@@ -9,6 +9,8 @@ testUsage(
   coverage,
   genome,
   utr3,
+  UTR3CDS.cov = NULL,
+  hugeData = FALSE,
   BPPARAM = NULL,
   method = c("limma", "fisher.exact", "singleSample", "singleGroup"),
   normalize = c("none", "quantiles", "quantiles.robust", "mean", "median"),
@@ -30,6 +32,11 @@ testUsage(
 
 \item{utr3}{output of \code{\link[=utr3Annotation]{utr3Annotation()}}}
 
+\item{UTR3CDS.cov}{an object of \link[GenomicRanges:GRanges-class]{GenomicRanges::GRanges}, output of
+\code{\link[=integrate3UTRUsage]{integrate3UTRUsage()}}}
+
+\item{hugeData}{logical(1), indication whether the data is huge}
+
 \item{BPPARAM}{an optional \link[BiocParallel:BiocParallelParam-class]{BiocParallel::BiocParallelParam} instance
 determining the parallel back-end to be used during evaluation, or a list
 of BiocParallelParam instances, to be applied in sequence for nested calls
@@ -43,11 +50,12 @@ to bplapply.}
 \item{design}{a design matrix of the experiment, with rows corresponding to
 arrays and columns to coefficients to be estimated. Defaults to the unit
 vector meaning that the arrays are treated as replicates. see
-\code{\link[stats:model.matrix]{stats::model.matrix()}}.}
+\code{\link[stats:model.matrix]{stats::model.matrix()}}. Required for limma-based analysis.}
 
 \item{contrast.matrix}{a numeric matrix with rows corresponding to
 coefficients in fit and columns containing contrasts. May be a vector if
-there is only one contrast. see \code{\link[limma:makeContrasts]{limma::makeContrasts()}}}
+there is only one contrast. see \code{\link[limma:makeContrasts]{limma::makeContrasts()}}. Required for
+limma-based analysis.}
 
 \item{coef}{column number or column name specifying which coefficient or
 contrast of the linear model is of interest. see more \code{\link[limma:toptable]{limma::topTable()}}.
@@ -58,9 +66,9 @@ parameters be robustified against outlier sample variances?}
 
 \item{...}{other arguments are passed to lmFit}
 
-\item{gp1}{tag names involved in group 1}
+\item{gp1}{tag names involved in group 1. required for Fisher Exact test}
 
-\item{gp2}{tag names involved in group 2}
+\item{gp2}{tag names involved in group 2. required for Fisher Exact test}
 }
 \value{
 a list with test results in a matrix.

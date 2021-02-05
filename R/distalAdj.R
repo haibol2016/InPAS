@@ -7,7 +7,7 @@
 #' @param classifier_cutoff cutoff value of the classifier
 #' @param shift_range the searching range for the better CP sites
 #' @param genome a [BSgenome::BSgenome-class] object
-#' @param step adjust step, default 1, means adjust by each base by
+#' @param step adjusting step, default 1, means adjusting by each base by
 #'   cleanUpdTSeq.
 #' @seealso [searchProximalCPs()], [PAscore2()]
 #' @keywords internal
@@ -26,7 +26,8 @@ distalAdj <- function(distalCPs, classifier, classifier_cutoff,
         coor[length(coor) - 2 * shift_range],
         coor[1]
       )
-      pos <- seq(start, end, by = ifelse(strand == "+", -1 * step, 1 * step))
+      pos <- seq(start, end, by = ifelse(strand == "+",
+                                         -1 * step, 1 * step))
       idx <- match(pos, coor)
       cbind(pos, idx, ID)
     } else {

@@ -13,15 +13,14 @@
 #' @keywords internal
 #'
 
-
 depthWeight <- function(coverage, hugeData, groupList = NULL) {
   n <- names(coverage)
   if (hugeData) {
     depth <- numeric(length(coverage))
     for (i in 1:length(coverage)) {
       cvg <- NULL
-      load(coverage[[i]]) ## load coverage rds
-
+      load(coverage[[i]]) 
+      
       d <- sapply(cvg, function(.cvg) {
         sum(as.double(runValue(.cvg)) * runLength(.cvg))
       })
@@ -37,7 +36,7 @@ depthWeight <- function(coverage, hugeData, groupList = NULL) {
         stop("all the tags in groupList must have correct names as it in coverage")
       }
       depth <- split(depth, groups)
-
+      
       ## group mean depth
       depth <- sapply(depth, mean)
       n <- names(depth)
@@ -49,10 +48,9 @@ depthWeight <- function(coverage, hugeData, groupList = NULL) {
       })
       sum(d)
     })
+    depth.weight <- depth / mean(depth)
+    names(depth.weight) <- n
+    depth.weight
   }
-
-  depth.weight <- depth / mean(depth)
-  names(depth.weight) <- n
-
-  depth.weight
 }
+
