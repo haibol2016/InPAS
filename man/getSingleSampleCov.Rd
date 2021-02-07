@@ -30,7 +30,7 @@ of BiocParallelParam instances, to be applied in sequence for nested calls
 to bplapply. It can be set to NULL or bpparam()}
 
 \item{outdir}{a directory with write permission for storing intermediate
-coverage data. This is required for hughe data, i.e., when hugeData is set
+coverage data. This is required for huge data, i.e., when hugeData is set
 to TRUE}
 }
 \value{

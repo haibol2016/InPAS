@@ -23,10 +23,10 @@
 #'   left_join summarise n
 #'
 #' @author Jianhong Ou, Haibo Liu
-#' @return an object of GRanges with 7 metadata columns:
+#' @return an object of [GenomicRanges::GRangesList] with 7 metadata columns:
 #'   feature (utr3, next.exon.gap, CDS), annotatedProximalCP (unknown,
 #'   proximalCP_coordinate), exon (transcript id_index), transcript, gene
-#'   (entrez_id), symbol, truncated (logical).
+#'   (gene_id), symbol, truncated (logical).
 #'
 #' @export
 #'
@@ -56,9 +56,11 @@ utr3Annotation <- function(TxDb = NULL, edb = NULL,
   tx <- parseTxDb(TxDb, edb, removeScaffolds = removeScaffolds)
   ## extract utr3 sharing same start positions from same gene
   if (any(is.na(tx$gene) | tx$gene == "")) {
-    stop("unexpect happend at checking gene IDs")
+    stop("unexpected things happend at checking gene IDs", 
+         " gene should not contain NA or empty strings")
   }
 
+  
   utr3 <- tx %>%
     plyranges::filter(feature != "ncRNA" &
       feature %in% c("utr3", "lastutr3")) %>%
@@ -413,7 +415,8 @@ utr3Annotation <- function(TxDb = NULL, edb = NULL,
     gr
   })
   rmv_idx <- do.call("c", lapply(utr3.last_overlap_split, is.null))
-  utr3.last_overlap_split <- unlist(GRangesList(utr3.last_overlap_split[!rmv_idx]))
+  utr3.last_overlap_split <- 
+    unlist(GRangesList(utr3.last_overlap_split[!rmv_idx]))
   utr3.last <- c(utr3.last_isolated, utr3.last_overlap_split)
 
   ###################################################################
@@ -425,7 +428,8 @@ utr3Annotation <- function(TxDb = NULL, edb = NULL,
   )]
   utr3.last.unknown <- utr3.last[utr3.last$annotatedProximalCP == "unknown"]
   utr3.last.sameStart.CP <-
-    strsplit(gsub("proximalCP_", "", utr3.last.sameStart$annotatedProximalCP), "_")
+    strsplit(gsub("proximalCP_", "",
+                  utr3.last.sameStart$annotatedProximalCP), "_")
   utr3.last.sameStart.Start <- start(utr3.last.sameStart)
   utr3.last.sameStart.End <- end(utr3.last.sameStart)
   utr3.last.sameStart$annotatedProximalCP <- mapply(function(cp, st, en) {
@@ -507,5 +511,6 @@ utr3Annotation <- function(TxDb = NULL, edb = NULL,
       utr3.fixed$feature,
       sep = "|"
     )
-  sort(utr3.fixed)
+  utr3.fixed <- split(utr3.fixed, seqnames(utr3.fixed))
+  utr3.fixed
 }

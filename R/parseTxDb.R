@@ -174,12 +174,13 @@ parseTxDb <- function(TxDb = NULL, edb = NULL,
       paste(transcript, exon_rank, sep = "_"),
       sep = ":"
     ))
-  rm(
-    utr5, cds, utr3, noncoding_exons, singleton,
+  
+  ## clean up
+  rm(utr5, cds, utr3, noncoding_exons, singleton,
     noncoding_exons_multiplex, noncoding_exons_singleton,
-    multiplex, nexons, exons
-  )
+    multiplex, nexons, exons)
   gc()
+  
   ## Gene ID type
   keytype <- ""
   if (any(grepl("^ENS", tx$gene[1:10], perl = TRUE))) {

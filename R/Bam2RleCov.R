@@ -6,7 +6,7 @@
 #' @param tag A character(1) name tags used to label the input bamfile
 #' @param param An instance of [Rsamtools::ScanBamParam-class]. This influences 
 #'   what fields and which records are imported. Use of which requires that a 
-#'   BAM index file (<filename>.bai) (<filename>.bai) exists.
+#'   BAM index file (filename.bai) exists.
 #' @param mapqFilter An integer(1), mapping quality filtering threshold. 
 #'   Default is 255, good for uniquely mapping reads by RNA aligner, STAR.
 #' @param run.type A character(1), sequencing read layout: single end or 
@@ -21,7 +21,7 @@
 #'
 #' @return If hugeData is set "FALSE", the function returns a list containing 
 #'   read coverage and total depth for a bedgraph file. The first list element
-#'   contains a list of Rle instances of [S4Vector::Rle-class] representing
+#'   contains a list of Rle instances of [S4Vectors::Rle-class] representing
 #'   read coverage for each chromosome, with the chromosome names starting 
 #'   with "chr" as names. The second element contains total depth. Otherwise,
 #'   the returned value is a character(1), with tag as the name.

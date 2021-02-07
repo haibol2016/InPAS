@@ -72,14 +72,15 @@ gcComp <- function(genome, seqnames, window = 50) {
     dna <- toString(genome[[seqname]])
     dna <- paste0(
       dna,
-      paste(rep("N", win_size - 1), collapse = "")
-    )
-    window_gc <- letterFrequencyInSlidingView(DNAString(dna),
-      view.width = win_size,
-      letters = "CG",
-      OR = "|",
-      as.prob = TRUE
-    )
+      paste(rep("N", win_size - 1), collapse = ""))
+    
+    window_gc <- 
+      letterFrequencyInSlidingView(DNAString(dna),
+                                   view.width = win_size,
+                                   letters = "CG",
+                                   OR = "|",
+                                   as.prob = TRUE)
+
     ## seqname-level GC% / per-window GC%
     ## what if window_gc = 0?
     wk <- fref[seqname] / window_gc[, 1]

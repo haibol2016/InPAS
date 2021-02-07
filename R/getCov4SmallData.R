@@ -20,25 +20,12 @@
 #' @return a list of coverage files or objects of [S4Vectors::Rle-class] 
 #' @export
 
-getCov4SmallData <- function(bedgraphs, 
-                             tags,
+getCov4SmallData <- function(sqlite_db,
                              genome, 
                              removeScaffolds = FALSE,
                              BPPARAM = NULL){
-    if (missing(tags) || missing(bedgraphs)) {
-        stop("tags and bedgraphs are required.")
-    }
-    if (length(tags) != length(bedgraphs)) {
-        stop("length of tags and bedgraphs should be identical.")
-    }
-    if (!is.character(tags)) {
-        stop("tags must be a character vector")
-    }
-    if (any(duplicated(tags))) {
-        stop("tags must be unique")
-    }
-    if (any(!file.exists(bedgraphs))) {
-        stop("Not all bedgraphs exist")
+    if (missing(sqlite_db) || length(sqlite_db) != 1) {
+        stop("A path to a sqlite database is required!")
     }
     if (missing(genome)) {
         stop("genome is required.")
@@ -46,9 +33,15 @@ getCov4SmallData <- function(bedgraphs,
     if (!is(genome, "BSgenome")) {
         stop("genome must be an object of BSgenome.")
     }
-    if (length(bedgraphs) > 6){
+    
+    db_conn <- dbConnect(drv = RSQLite::SQLite(), dbname= sqlite_db)
+    metadata <- dbGetQuery(db_conn, "SELECT * FROM metadata;")
+    bedgraphs <- metadata$bedgraph_file
+    tags <- metadata$tag
+    
+    if (nrow(metadata) > 6){
         stop("For an experiment with more than 6 samples, please use the ",
-             "functions bedgraph2RleCov() and getCovFileList subsequentially")
+             "functions bedgraph2RleCov() and getCov4HugeData subsequentially")
     }
 
     if (is.null(BPPARAM)){
@@ -96,6 +89,14 @@ getCov4SmallData <- function(bedgraphs,
         cov_depth$depth[i] <- cov[[tags[i]]]$depth
     }
     names(cov_depth$depth) <- tags
+    
+    for (d in names(cov_depth$depth)){
+        dbSendQuery(db_conn,
+                    paste("UPDATE metadata SET depth = ",
+                          cov_depth$depth[d], "WHERE tag = ",
+                          d, ";"))
+    }
+    
     
     ## return a list with the first element containing a list of chromosome-wise
     ## Rle coverage of each sample and the first element containing total read

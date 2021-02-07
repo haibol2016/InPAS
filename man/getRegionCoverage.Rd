@@ -7,13 +7,15 @@
 getRegionCoverage(chr, utr3.regions.chr, hugeData, coverage, phmm = FALSE)
 }
 \arguments{
-\item{chr}{chromosome}
+\item{chr}{character(1), chromosome/scaffold name}
 
-\item{utr3.regions.chr}{the GRanges of region to be extracted}
+\item{utr3.regions.chr}{An object of \link[GenomicRanges:GRangesList-class]{GenomicRanges::GRangesList},
+with a GRanges for a single seqname (chromosome/scaffold). It is an
+output from the \code{\link[=get3UTRCDSRegionsPerSeqname]{get3UTRCDSRegionsPerSeqname()}}}
 
 \item{hugeData}{is it a huge dataset?}
 
-\item{coverage}{output of coverageFromBedGraph, a list of coverage file names
+\item{coverage}{output of \code{\link[=coverageFromBedGraph]{coverageFromBedGraph()}}, a list of coverage file names
 or a list of coverage objects}
 
 \item{phmm}{prepare data for singleSample analysis?}
