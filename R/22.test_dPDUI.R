@@ -4,6 +4,10 @@
 #' 
 #' @param eset An object of [UTR3eSet-class]. It is an output of 
 #'   [get_UTR3eSet()]
+#' @param sqlite_db A path to the SQLite database for InPAS, i.e. the output of
+#'   setup_sqlitedb().
+#' @param outdir A character(1) vector, a path with write permission for storing 
+#'   InPAS analysis results. If it doesn't exist, it will be created.
 #' @param method A character(1), indicating the method for testing dPDUI. It can 
 #'   be "limma", "fisher.exact", "singleSample", or "singleGroup"
 #' @param normalize A character(1), indicating the normalization method. It can 
@@ -19,11 +23,9 @@
 #' @param coef column number or column name specifying which coefficient or
 #'   contrast of the linear model is of interest. see more [limma::topTable()].
 #'   default value: 1
-#' @param robust logical, should the estimation of the empirical Bayes prior
-#'   parameters be robustified against outlier sample variances?
+#' @param robust A logical(1) vector, indicating whether the estimation of the empirical Bayes prior
+#'   parameters should be robustified against outlier sample variances.
 #' @param ... other arguments are passed to lmFit
-#' @param sqlite_db A path to the SQLite database for InPAS, i.e. the output of
-#'   setup_sqlitedb().
 #' 
 #' @return An object of [UTR3eSet-class], with the last element \code{testRes} containing the test results in a matrix.
 #' @details if method is "limma", design matrix and contrast is required. if
@@ -43,30 +45,46 @@
 #' contrast.matrix <- makeContrasts(contrasts = "Brain-UHR", 
 #'                                  levels = design)
 #' res <- test_dPDUI(eset = eset,
+#'                   sqlite_db,
 #'                   method = "limma",
 #'                   normalize = "none",
 #'                   design = design,
 #'                   contrast.matrix = contrast.matrix)
 
 test_dPDUI <- function(eset,
-                      method = c("limma", "fisher.exact",
+                       sqlite_db,
+                       outdir = getInPASOutputDirectory(),
+                       method = c("limma", "fisher.exact",
                                  "singleSample", "singleGroup"),
-                      normalize = c("none", "quantiles", 
+                       normalize = c("none", "quantiles", 
                                     "quantiles.robust",
                                     "mean", "median"),
-                      design, 
-                      contrast.matrix,
-                      coef = 1, 
-                      robust = FALSE, 
-                      ...,
-                      sqlite_db) {
+                       design, 
+                       contrast.matrix,
+                       coef = 1, 
+                       robust = FALSE, 
+                       ...) {
   if (missing(eset)){
     stop("eset is required")
   }
-  if (!is(eset, "UTR3eSet")){
-    stop("eset is not an object of UTR3eSet class!")
+  if (!is(eset, "UTR3eSet")) {
+    stop("eset must be an object of UTR3eSet")
   }
-  
+  if (!is.character(outdir) || length(outdir) != 1){
+    stop("An explicit output directory is required")
+  } else {
+    outdir <- file.path(outdir, "009.test_dPDUI")
+    if (!dir.exists(outdir)){
+      dir.create(outdir, recursive = TRUE, 
+                 showWarnings = FALSE)
+    }
+    outdir <- normalizePath(outdir)
+  }
+  if (!is.logical(robust) || length(robust) != 1)
+  {
+    stop("robust must be a logical(1) vector")
+  }
+
   method <- match.arg(arg = method, choices = c("limma", "fisher.exact",
                                                 "singleSample", "singleGroup"))
   normalize <- match.arg(arg = normalize, choices = c("none", "quantiles", 
@@ -83,7 +101,8 @@ test_dPDUI <- function(eset,
       )
     }
     if (method == "fisher.exact") {
-      if (missing(sqlite_db)) {
+      if (missing(sqlite_db) || length(sqlite_db) != 1 || 
+          !file.exists(sqlite_db)) {
         stop("sqlite_db is required for Fisher exact test.")
       }
       db_conn <- dbConnect(drv = RSQLite::SQLite(), dbname = sqlite_db)
@@ -105,5 +124,6 @@ test_dPDUI <- function(eset,
     res <- run_singleSampleAnalysis(eset)
   }
   eset$testRes <- res
+  saveRDS(eset, file = file.path(outdir, "dPDUI.test.RDS"))
   return(eset)
 }

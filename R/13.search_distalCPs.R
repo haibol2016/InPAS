@@ -24,6 +24,7 @@
 #' @return a list
 #' @seealso [get_PAscore2()]
 #' @import S4Vectors
+#' @importFrom parallel detectCores mcmapply
 #' @keywords internal
 #' @author Jianhong Ou
 
@@ -35,9 +36,9 @@ search_distalCPs <- function(chr.cov.merge,
                              long_coverage_threshold,
                              background,
                              z2s) {
-  distalCPs <- mapply(function(chr.cov.merge.ele,
-                               conn_next_utr,
-                               curr_UTR.ele) {
+  find_distalCPs <- function(chr.cov.merge.ele,
+                        conn_next_utr,
+                        curr_UTR.ele) {
     chr.cov.merge.ele <-
       t(t(chr.cov.merge.ele) / depth.weight[colnames(chr.cov.merge.ele)])
     .ele <- rowSums(chr.cov.merge.ele)
@@ -114,9 +115,8 @@ search_distalCPs <- function(chr.cov.merge,
     }
     ## remove utr3---___---utr3, need to improve.
     if (conn_next_utr && length(next.exon.gap) > 50) {
-      next.exon.gap <- remove_convergentUTR3s(next.exon.gap)
+      next.exon.gap <- InPAS:::remove_convergentUTR3s(next.exon.gap)
     }
-
     annotated.utr3 <- .ele[grepl("utr3", names(.ele))]
     utr3start <- as.numeric(gsub("^.*_SEP_", "", names(annotated.utr3)[1]))
     utr3end <- as.numeric(gsub("^.*_SEP_", "",
@@ -155,16 +155,19 @@ search_distalCPs <- function(chr.cov.merge,
          cov = chr.cov.merge.ele,
          gap = next.exon.gap,
          annotated.utr3 = annotated.utr3)
-  }, chr.cov.merge,
-  conn_next_utr3,
-  curr_UTR,
-  SIMPLIFY = FALSE)
-
+  }
+  
+  distalCPs <- mapply(find_distalCPs,
+                      chr.cov.merge,
+                      conn_next_utr3,
+                      curr_UTR,
+                      SIMPLIFY = FALSE)
   dCPs <- do.call(rbind, lapply(distalCPs, `[[`, "info"))
   chr.cov.merge <- lapply(distalCPs, `[[`, "cov")
   next.exon.gap <- lapply(distalCPs, `[[`, "gap")
   annotated.utr3 <- lapply(distalCPs, `[[`, "annotated.utr3")
-  list(dCPs = dCPs, chr.cov.merge = chr.cov.merge,
+  list(dCPs = dCPs, 
+       chr.cov.merge = chr.cov.merge,
        next.exon.gap = next.exon.gap,
        annotated.utr3 = annotated.utr3)
 }

@@ -1,4 +1,4 @@
-#' Assemble coverage files for all samples
+#' Assemble coverage files for a given chromosome for all samples
 #' 
 #' Process individual sample-chromosome-specific coverage files in an
 #'   experiment into a file containing a list of chromosome-specific Rle
@@ -6,13 +6,14 @@
 #'
 #' @param sqlite_db A path to the SQLite database for InPAS, i.e. 
 #'   the output of setup_sqlitedb()
+#' @param seqname A character(1) vector, the name of a chromosome/scaffold
 #' @param outdir A character(1) vector, a path with write permission for storing 
-#'   the coverage data. If it doesn't exist, it will be created.
+#'   InPAS analysis results. If it doesn't exist, it will be created.
 #' @param genome An object of [BSgenome::BSgenome-class]
-#' @param removeScaffolds A logical(1) vector, whether the scaffolds should be
-#'   removed from the genome If you use a TxDb containing alternative
-#'   scaffolds, you'd better to remove the scaffolds.
-
+#' @param chr2exclude A character vector, NA or NULL, specifying chromosomes or 
+#'   scaffolds to be excluded for InPAS analysis. `chrM` and alternative scaffolds
+#'   representing different haplotypes should be excluded.
+#'   
 #' @return A list of paths to per-chromosome coverage files of all samples.
 #' \itemize{\item seqname, chromosome/scaffold name
 #'             \itemize{
@@ -49,22 +50,21 @@
 #'                             genome = genome,
 #'                             sqlite_db = sqlite_db,
 #'                             outdir = outdir,
-#'                             removeScaffolds = TRUE,
+#'                             chr2exclude = "chrM",
 #'                             BPPARAM = NULL)
 #'    }
-#'    coverage_files <- assemble_allCov(sqlite_db, 
-#'                                     outdir, 
-#'                                     genome, 
-#'                                     removeScaffolds = FALSE)
+#'    chr_coverage <- assemble_allCov(sqlite_db,
+#'                                    seqname = "chr6",
+#'                                    outdir = outdir, 
+#'                                    genome = genome, 
+#'                                    chr2exclude = "chrM")
 #' }
 
-assemble_allCov <- function(sqlite_db, 
-                          outdir,
-                          genome,
-                          removeScaffolds = FALSE){
-    if (missing(genome)) {
-        stop("genome is required.")
-    }
+assemble_allCov <- function(sqlite_db,
+                            seqname,
+                            outdir = getInPASOutputDirectory(),
+                            genome = getInPASGenome(), 
+                            chr2exclude = getChr2Exclude()){
     if (!is(genome, "BSgenome")) {
         stop("genome must be an object of BSgenome.")
     }
@@ -72,69 +72,75 @@ assemble_allCov <- function(sqlite_db,
         length(sqlite_db) != 1){
         stop("The sqlite_db length is not 1 or it doesn't exist!")
     }
-    db_conn <- dbConnect(drv = RSQLite::SQLite(), dbname= sqlite_db)
-    res <- dbGetQuery(db_conn, "SELECT * FROM sample_coverage;")
+    if (!is.null(chr2exclude) && !is.character(chr2exclude))
+    {
+        stop("chr2Exclude must be NULL or a character vector")
+    }
+    lock_filename <- getLockName()
+    if (!file.exists(lock_filename)) 
+    {
+        stop("lock_filename must be an existing file.",
+             "Please call addLockName() first!")
+    }
+    
+    file_lock <- lock(lock_filename)
+    db_conn <- dbConnect(drv = RSQLite::SQLite(), 
+                         dbname = sqlite_db)
+    res <- dbGetQuery(db_conn, "SELECT * FROM sample_coverage;") 
     dbDisconnect(db_conn)
+    unlock(file_lock)
     
     if (nrow(res) < 1){
         stop("The sample_coverage table in the sqlite_db is empty")
     }
-    if (is.null(lock_filename) || !file.exists(lock_filename)) 
-    {
-        stop("lock_filename must be an existing file.")
+    if (!seqname %in% res$chr){
+        stop("seqname", seqname, "is not in the sample_coverage table")
     }
-    if (missing(outdir)){
+    if (!is.character(outdir) || length(outdir) != 1){
         stop("A directory of write permission is required!")
     }
-    od <- file.path(outdir, "chromosmewise_RleCov")
-    if (!dir.exists(od)){
-        dir.create(od, recursive = TRUE)
+    outdir <- file.path(outdir, "003.chromosomewise.RleCov")
+    if (!dir.exists(outdir)){
+        dir.create(outdir, recursive = TRUE)
     }
-    od <- normalizePath(od, mustWork = TRUE)
-    
-    seqLen <- get_seqLen(genome, removeScaffolds)
-    
-    filenames <- list()
-    for (seqname in unique(res$chr)){
-        chr_cov <- list()
-        for (tag in unique(res$tag)){
-            file_name <- res$coverage_file[res$tag == tag & 
-                                               res$chr == seqname]
-            if (length(file_name) == 1) {
-                chr_cov[[seqname]][[tag]] <- readRDS(file_name)
-            } else {
-                chr_cov[[seqname]][[tag]] <- 
-                    Rle(values = 0, lengths = seqLen[seqname])
-            }
-        }
-        filename <- file.path(od, 
-                              paste(seqname, 
-                                    "RleCov.RDS", sep = "_"))
-        
-        ## chr_cov: chr_cov[[seqname]][[tag]]
-        saveRDS(chr_cov, file = filename)
-        filenames[[seqname]] <- filename
-    }
+    outdir <- normalizePath(outdir, mustWork = TRUE)
 
-    filename_df <- data.frame(chr = names(filenames), 
-                              coverage_file = unlist(filenames))
+    seqLen <- get_seqLen(genome, chr2exclude)
     
-    tryCatch({
-        db_conn <- dbConnect(drv = RSQLite::SQLite(), dbname= sqlite_db)
+    chr_cov <- list()
+    for (tag in unique(res$tag)){
+        file_name <- res$coverage_file[res$tag == tag & 
+                                           res$chr == seqname]
+        if (length(file_name) == 1) {
+            chr_cov[[seqname]][[tag]] <- readRDS(file_name)
+        } else {
+            chr_cov[[seqname]][[tag]] <- 
+                Rle(values = 0, lengths = seqLen[seqname])
+        }
+    }
+    filename_chr <- file.path(outdir, 
+                          paste(seqname, 
+                                "RleCov.RDS", sep = "_"))
+    ## chr_cov: chr_cov[[seqname]][[tag]]
+    saveRDS(chr_cov, file = filename_chr)
+
+        tryCatch({
+        file_lock <- lock(lock_filename)
+        db_conn <- dbConnect(drv = RSQLite::SQLite(), 
+                             dbname= sqlite_db)
         res <- dbSendStatement(db_conn, 
-                               paste0("DELETE FROM chromosome_coverage;"))
+                               paste0("DELETE FROM chromosome_coverage 
+                                      WHERE chr = '", seqname, "';"))
         dbClearResult(res)
         res <- dbSendStatement(db_conn, 
-                               "INSERT INTO 
+                               paste0("INSERT INTO 
                         chromosome_coverage (chr, coverage_file) 
-                        VALUES (:chr, :coverage_file);", 
-                               filename_df)
+                        VALUES ('", seqname,"',", "'", filename_chr, "');"))
         dbClearResult(res)
     }, error = function(e) {
         print(paste(conditionMessage(e)))
     },
-    finally = {dbDisconnect(db_conn)})
-    
-    ## filenames[[seqname]]
-    filenames
+    finally = {dbDisconnect(db_conn)
+        unlock(file_lock)})
+    chr_cov
 }

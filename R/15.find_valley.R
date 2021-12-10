@@ -15,16 +15,15 @@
 #'
 #' @return a numeric vector containing a number of candidate CP sites.
 #' @keywords internal
-#' 
 #' @importFrom stats quantile runif
 #' @author Jianhong Ou
 
 find_valley <- function(x, 
-                   ss, 
-                   se,
-                   n = 1,
-                   savedID = NA,
-                   filterByPval = TRUE) {
+                        ss, 
+                        se,
+                        n = 1,
+                        savedID = NA,
+                        filterByPval = TRUE) {
   ## local minimal: like sign switching of second-order derivative,
   ## assuming there is no flat valley
   pos <- which(diff(c(sign(diff(c(x[1], x[ss:se]))), 0)) == 2) + ss - 1
@@ -42,8 +41,7 @@ find_valley <- function(x,
     }, pos.pos[w - 1] - space,
     pos.pos[w - 1] + space,
     pos,
-    SIMPLIFY = FALSE
-    )
+    SIMPLIFY = FALSE)
 
     mu <- sapply(y, mean, na.rm = TRUE)
     sigma <- sapply(y, sd, na.rm = TRUE)

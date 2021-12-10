@@ -1,0 +1,42 @@
+Package: InPAS
+Title: A Bioconductor package for identifying novel Alternative PolyAdenylation 
+       Sites (PAS) from RNA-seq data
+Version: 2.3.0
+Authors@R: c(person("Jianhong", "Ou", role = c("aut", "cre"), 
+             email = "jianhong.ou@duke.edu"), 
+             person("Haibo", "Liu", role = c("aut"), 
+             email = "haibo.liu@umassmed.edu"),
+             person("Lihua Julie", "Zhu", role = c("aut"), 
+             email = "Julie.Zhu@umassmed.edu"), 
+             person("Sungmi M.", "Park", role = "aut"),
+             person("Michael R.", "Green", role = "aut"))
+Maintainer: Jianhong Ou <jianhong.ou@duke.edu>
+Description: Alternative polyadenylation (APA) is one of the important post-
+             transcriptional regulation mechanisms which occurs in most human
+             genes. InPAS facilitates the discovery of novel APA sites and the
+             differential usage of APA sites from RNA-Seq data. It leverages 
+             cleanUpdTSeq to fine tune identified APA sites by removing false 
+             sites.
+biocViews: RNASeq, Sequencing, AlternativeSplicing, Coverage,
+        DifferentialSplicing, GeneRegulation, Transcription,
+        ImmunoOncology
+License: GPL (>= 2)
+Imports: AnnotationDbi, BSgenome, cleanUpdTSeq, preprocessCore, 
+        IRanges, GenomeInfoDb, depmixS4, limma, BiocParallel, 
+	Biostrings, dplyr, magrittr, plyranges, readr, RSQLite, 
+	DBI, purrr, GenomicFeatures, ggplot2, reshape2, flock,
+	batchtools
+Depends: R (>= 3.1), methods, Biobase, GenomicRanges, S4Vectors
+Suggests: RUnit, BiocGenerics, future, parallelly, doFuture,
+        future.apply, future.batchools,BiocManager, rtracklayer, 
+        BiocStyle, knitr, markdown, rmarkdown, 
+        EnsDb.Hsapiens.v86,EnsDb.Mmusculus.v79,
+        BSgenome.Hsapiens.UCSC.hg19, 
+        BSgenome.Mmusculus.UCSC.mm10,
+        TxDb.Hsapiens.UCSC.hg19.knownGene,
+        TxDb.Mmusculus.UCSC.mm10.knownGene
+VignetteBuilder: knitr
+RoxygenNote: 7.1.2
+Roxygen: list(markdown = TRUE)
+LazyData: true
+Encoding: UTF-8

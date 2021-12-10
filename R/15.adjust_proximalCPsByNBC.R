@@ -14,7 +14,9 @@
 #' @param search_point_START just in case there is no better CP sites
 #' @param step adjusting step, default 1, means adjust by each base by
 #'   cleanUpdTSeq.
-#'
+#' @param mc.cores An integer(1) vector, number of cores for the mc*apply 
+#'   function of the parallel package
+#'   
 #' @return the offset of positions of CP sites after filter
 #' @details the step for calculating is 10, can not do every base base it is
 #'   really very slow.
@@ -23,17 +25,18 @@
 #' @seealso [adjust_proximalCPsByPWM()], [get_PAscore2()]
 #'
 
-adjust_proximalCPsByNBC <- function(idx.list, 
-                                      cov_diff.list,
-                                      seqnames, 
-                                      starts, 
-                                      strands,
-                                      genome, 
-                                      classifier, 
-                                      classifier_cutoff,
-                                      shift_range, 
-                                      search_point_START, 
-                                      step = 1) {
+adjust_proximalCPsByNBC <- function(idx.list,
+                                    cov_diff.list,
+                                    seqnames, 
+                                    starts, 
+                                    strands,
+                                    genome, 
+                                    classifier, 
+                                    classifier_cutoff,
+                                    shift_range, 
+                                    search_point_START, 
+                                    step = 1,
+                                    mc.cores = 1) {
   idx.len <- sapply(idx.list, length)
   offsite <- 10^nchar(as.character(max(idx.len) * ceiling(shift_range / step)))
   pos.matrix <- mapply(function(idx, start, strand, cov_diff, ID) {
@@ -75,14 +78,15 @@ adjust_proximalCPsByNBC <- function(idx.list,
   pos.matrix <- do.call(rbind, pos.matrix)
 
   if (length(pos.matrix) > 0) {
-    idx <- get_PAscore2(
-      seqnames[pos.matrix[, "ID"]],
-      pos.matrix[, "pos"],
-      strands[pos.matrix[, "ID"]],
-      pos.matrix[, "idx"],
-      pos.matrix[, "ID"] * offsite + pos.matrix[, "idx.gp"],
-      genome, classifier, classifier_cutoff
-    )
+    idx <- InPAS:::get_PAscore2(seqnames[pos.matrix[, "ID"]],
+                        pos.matrix[, "pos"],
+                        strands[pos.matrix[, "ID"]],
+                        pos.matrix[, "idx"],
+                        pos.matrix[, "ID"] * offsite + pos.matrix[, "idx.gp"],
+                        genome, classifier, 
+                        classifier_cutoff,
+                        mc.cores)
+                        
     idx$ID <- floor(idx$idx.gp / offsite)
     idx <- idx[!duplicated(idx$ID), ]
     IDs <- unique(pos.matrix[, "ID"])

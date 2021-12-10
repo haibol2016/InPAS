@@ -31,7 +31,7 @@
 #'    
 #'    ## load UTR3 annotation and convert it into a GRangesList
 #'    data(utr3.mm10)
-#'    utr3 <- split(utr3.mm10, seqnames(utr3.mm10))
+#'    utr3 <- split(utr3.mm10, seqnames(utr3.mm10), drop = TRUE)
 #'    
 #'    bedgraphs <- system.file("extdata",c("Baf3.extract.bedgraph",
 #'                                         "UM15.extract.bedgraph"), 
@@ -53,21 +53,22 @@
 #'                             genome = genome,
 #'                             sqlite_db = sqlite_db,
 #'                             outdir = outdir,
-#'                             removeScaffolds = TRUE,
+#'                             chr2exclude = "chrM",
 #'                             BPPARAM = NULL)}
-#'    coverage_files <- assemble_allCov(sqlite_db, 
-#'                                     outdir, 
-#'                                     genome, 
-#'                                     removeScaffolds = TRUE)
+#'                             
 #'    data4CPsSearch <- setup_CPsSearch(sqlite_db,
 #'                                      genome,
-#'                                      utr3,
+#'                                      chr.utr3 = utr3[["chr6"]],
+#'                                      seqname = "chr6",
 #'                                      background = "10K",
 #'                                      TxDb = TxDb,
-#'                                      removeScaffolds = TRUE,
-#'                                      BPPARAM = NULL,
+#'                                      chr2exclude = "chrM",
 #'                                      hugeData = TRUE,
-#'                                      outdir = outdir)
+#'                                      outdir = outdir,
+#'                                      minZ = 2,
+#'                                      cutStart = 10,
+#'                                      MINSIZE = 10,
+#'                                      coverage_threshold = 5)
 #'    ## polyA_PWM
 #'    load(system.file("extdata", "polyA.rda", package = "InPAS"))
 #'    
@@ -77,19 +78,14 @@
 #'    
 #'    CPs <- search_CPs(seqname = "chr6",
 #'                      sqlite_db = sqlite_db, 
-#'                      utr3 = utr3,
-#'                      background = data4CPsSearch$background, 
-#'                      z2s = data4CPsSearch$z2s,
-#'                      depth.weight = data4CPsSearch$depth.weight,
+#'                      chr.utr3 = utr3[["chr6"]],
 #'                      genome = genome, 
 #'                      MINSIZE = 10, 
 #'                      window_size = 100,
 #'                      search_point_START =50,
 #'                      search_point_END = NA,
-#'                      cutStart = 10, 
 #'                      cutEnd = 0,
 #'                      adjust_distal_polyA_end = TRUE,
-#'                      coverage_threshold = 5,
 #'                      long_coverage_threshold = 2,
 #'                      PolyA_PWM = pwm, 
 #'                      classifier = classifier,
@@ -97,19 +93,11 @@
 #'                      shift_range = 100,
 #'                      step = 5,
 #'                      two_way = FALSE,
-#'                      hugeData = TRUE,
 #'                      outdir = outdir)
-#'                           
-#' utr3_cds <- InPAS:::get_UTR3CDS(sqlite_db,
-#'                         chr.utr3 = utr3[["chr6"]],
-#'                         BPPARAM = NULL)
-#'                         
 #' utr3_cds_cov <- get_regionCov(chr.utr3 = utr3[["chr6"]],
 #'                               sqlite_db,
 #'                               outdir,
-#'                               BPPARAM = NULL,
 #'                               phmm = FALSE)
-#'
 #' eSet <- get_UTR3eSet(sqlite_db,
 #'                      normalize ="none", 
 #'                      singleSample = FALSE)
@@ -126,8 +114,12 @@ get_UTR3eSet <- function(sqlite_db,
                                       "mean", "median"),
                         ...,
                         singleSample = FALSE) {
-    if (missing(sqlite_db)|| !file.exists(sqlite_db)){
+    if (missing(sqlite_db)|| length(sqlite_db) != 1 || !file.exists(sqlite_db)){
         stop("sqlite_db, a path to the SQLite database is required!")
+    }
+    if (!is.logical(singleSample) || length(singleSample) != 1)
+    {
+        stop("singleSample must be a logical(1) vector")
     }
     db_conn <- dbConnect(drv = RSQLite::SQLite(), dbname= sqlite_db)
     utr3_cov <- dbReadTable(db_conn, "utr3cds_coverage")
@@ -248,13 +240,15 @@ get_UTR3eSet <- function(sqlite_db,
                           signals.long, SIMPLIFY = FALSE)
         names(signals) <- UTRusage.total$transcript
         new("UTR3eSet",
-            usage = PDUItable, PDUI = UTRusage.PDUI,
+            usage = PDUItable, 
+            PDUI = UTRusage.PDUI,
             PDUI.log2 = UTRusage.PDUI.log2,
             short = UTRusage.short.data,
             long = UTRusage.long.data,
             signals = signals)
     } else {new("UTR3eSet",
-                usage = PDUItable, PDUI = UTRusage.PDUI,
+                usage = PDUItable, 
+                PDUI = UTRusage.PDUI,
                 PDUI.log2 = UTRusage.PDUI.log2,
                 short = UTRusage.short.data,
                 long = UTRusage.long.data)

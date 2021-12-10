@@ -1,6 +1,6 @@
 #' prepare coverage data and fitting data for plot
 #'
-#' @param gr an object of [GenomicRanges::GRanges-class]
+#' @param gr An object of [GenomicRanges::GRanges-class]
 #' @param proximalSites An integer(n) vector, specifying the coordinates of 
 #'   proximal CP sites. Each of the proximal sites must match one entry in the 
 #'   GRanges object, \code{gr}.
@@ -24,7 +24,7 @@
 #' 
 #'    ## load UTR3 annotation and convert it into a GRangesList
 #'    data(utr3.mm10)
-#'    utr3 <- split(utr3.mm10, seqnames(utr3.mm10))
+#'    utr3 <- split(utr3.mm10, seqnames(utr3.mm10), drop = TRUE)
 #'    
 #'    bedgraphs <- system.file("extdata",c("Baf3.extract.bedgraph",
 #'                                         "UM15.extract.bedgraph"), 
@@ -47,21 +47,16 @@
 #'                             genome = genome,
 #'                             sqlite_db = sqlite_db,
 #'                             outdir = outdir,
-#'                             removeScaffolds = TRUE,
+#'                             chr2exclude = "chrM",
 #'                             BPPARAM = NULL)
-#'    }
-#'    coverage_files <- assemble_allCov(sqlite_db, 
-#'                                      outdir, 
-#'                                      genome, 
-#'                                      removeScaffolds = TRUE)
-#'                                      
+#'    }                                      
 #'    data4CPsSearch <- setup_CPsSearch(sqlite_db,
 #'                                      genome,
-#'                                      utr3,
+#'                                      chr.utr3 = utr3[["chr6"]],
+#'                                      seqname = "chr6",
 #'                                      background = "10K",
 #'                                      TxDb = TxDb,
-#'                                      removeScaffolds = TRUE,
-#'                                      BPPARAM = NULL,
+#'                                      chr2exclude = "chrM",
 #'                                      hugeData = TRUE,
 #'                                      outdir = outdir)
 #'                                      
@@ -104,50 +99,48 @@ get_usage4plot <- function(gr,
   grs <- split(gr, as.character(seqnames(gr)))
   seqnames <- names(grs)
   
-  ## only need to do this for the specified gr??
-  depth.weight <- get_depthWeight(sqlite_db, hugeData)
-  
   db_conn <- dbConnect(drv = RSQLite::SQLite(), dbname = sqlite_db)
-  chromosome_cov <- dbReadTable(db_conn, "chromosome_coverage")
-  total_cov <- dbReadTable(db_conn, "total_coverage")[1,1]
+  metadata <- dbReadTable(db_conn, "metadata")
+  total_cov <- dbReadTable(db_conn, "total_coverage")
   on.exit(dbDisconnect(db_conn))
-  chromosome_cov <- chromosome_cov[chromosome_cov$chr %in% seqnames]
-  if (nrow(chromosome_cov) < 1) {
+  ## only need to do this for the specified gr??
+  depth.weight <- get_depthWeight(metadata= metadata,
+                                  hugeData)
+  
+  total_cov <- total_cov[total_cov$chr %in% seqnames, ]
+  if (nrow(total_cov) < 1) {
     stop("chromosomes in gr are not covered")
   }
-  totalCov <- readRDS(total_cov)
-  hugeData <- FALSE
+  totalCov <- lapply(total_cov$coverage_file, function(.x){
+      readRDS(.x)[[1]]
+  })
+  names(totalCov) <- total_cov$chr
 
   ## get coverage for each region
-  utr3TotalCov <-
-    get_UTR3TotalCov(grs, totalCov,
-      gcCompensation = gcCompensation,
-      mappabilityCompensation = mappabilityCompensation,
-      FFT = FFT, fft.sm.power = fft.sm.power)
+  utr3TotalCov <- list()
+  for (seqname in seqnames) {
+      utr3TotalCov[[seqname]] <-
+          get_UTR3TotalCov(grs[[seqname]], totalCov[seqname],
+                           gcCompensation = gcCompensation,
+                           mappabilityCompensation =
+                             mappabilityCompensation,
+                           FFT = FFT, 
+                           fft.sm.power = fft.sm.power)
+  }
+
   ## get least square error
-  datInfo <- lapply(utr3TotalCov[seqnames], function(.cov) {
+  datInfo <- lapply(utr3TotalCov, function(.cov) {
     .gr <- gr[names(.cov)]
     data <- mapply(function(.ele, .str) {
-      if (hugeData) {
-        if (.str) .ele <- rev(.ele)
-        se <- length(.ele) - 1
-        os <- find_segmentationSites(.ele,
-          search_point_START = 1,
-          search_point_END = se
-        )
-        cov_diff <- os$cov_diff
-        cvg <- .ele[1:se]
-      } else {
-        if (.str) .ele <- .ele[nrow(.ele):1, , drop = FALSE]
-        se <- nrow(.ele) - 1
-        os <- apply(.ele, 2, find_segmentationSites,
-          search_point_START = 1, search_point_END = se
-        )
-        cov_diff <- sapply(os, "[[", "cov_diff")
-        cov_diff <- rowMeans(cov_diff)
-        cvg <- .ele[1:se, , drop = FALSE]
-      }
-      
+      if (.str) .ele <- .ele[nrow(.ele):1, , drop = FALSE]
+      se <- nrow(.ele) - 1
+      os <- apply(.ele, 2, find_segmentationSites,
+                  search_point_START = 1, search_point_END = se
+      )
+      cov_diff <- sapply(os, "[[", "cov_diff")
+      cov_diff <- rowMeans(cov_diff)
+      cvg <- .ele[1:se, , drop = FALSE]
+
       # reformat data from wide to long
       dat <- as.data.frame(cbind(Position = 1:nrow(cvg),
                                  MSE = cov_diff, cvg))

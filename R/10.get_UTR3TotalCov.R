@@ -41,46 +41,34 @@ fft.smooth <- function(sn, p) {
 #' extract 3' UTR coverage from totalCov according to the 
 #'   [GenomicRanges::GRanges-class] object utr3.
 #'
-#' @param utr3 An object of [GenomicRanges::GRangesList-class]. It must be the
-#'   output of [extract_UTR3Anno()]
-#' @param totalCov total coverage for each sample. It must be a list of the 
-#'   output of [get_totalCov()]
-#' @param BPPARAM an optional [BiocParallel::BiocParallelParam-class] instance
-#'   determining the parallel back-end to be used during evaluation, or a list
-#'   of BiocParallelParam instances, to be applied in sequence for nested calls
-#'   to bplapply. It can be set to NULL or bpparam()
-#' @param gcCompensation GC compensation vector. Not support yet.
+#' @param chr.utr3 An object of [GenomicRanges::GRanges-class]. It must be an 
+#'   element of the output of [extract_UTR3Anno()] for a given chromosome.
+#' @param chr.totalCov total coverage for each condition of a given chromosome. It
+#'   must be an output of [get_totalCov()]
+#' @param gcCompensationensation GC compensation vector. Not support yet.
 #' @param mappabilityCompensation mappability compensation vector. Not support
 #'   yet.
 #' @param FFT Use FFT smooth or not.
 #' @param fft.sm.power the cut-off frequency of FFT smooth.
 #'
-#' @return A list containing total coverage for each 3' UTR. 
-#'   \describe{
-#'      \item{seqname}{chromosome/scaffold name}
-#'      \describe{
-#'      \item{transcript1}{data matrix containing summarized View
-#'            for transcript1}
-#'      \item{transcript2}{data matrix containing summarized View
-#'            for transcript2}
-#'      \item{transcriptN}{data matrix containing summarized View
-#'            for transcriptN}
-#'         }
-#'      }
+#' @return path to a file storing the UTR3 total coverage for a given 
+#'   chromosome/scaffold
 #' @keywords internal
 #' @import GenomicRanges
 #' @importFrom IRanges Views viewApply IRanges viewMeans
-#' @importFrom BiocParallel bptry bpok bplapply bpparam bpmapply
 #' @author Jianhong Ou
 
-get_UTR3TotalCov <- function(utr3, totalCov,
-                             BPPARAM = NULL,
+get_UTR3TotalCov <- function(chr.utr3, 
+                             chr.totalCov,
                              gcCompensation = NA,
                              mappabilityCompensation = NA,
                              FFT = FALSE,
                              fft.sm.power = 20) {
-  seqnames <- sort(intersect(names(utr3), names(totalCov)))
-  
+  ## output of get_totalCov() is a list of list:
+  ## chr.totalCov[[seqname]][[condition]]
+  chr.totalCov <- chr.totalCov[[1]]
+  ## memory consuming if gcCompensation, and mappabilityCompensation are 
+  ## used for coverage correction
   ## memory consuming if gcComp, and mapComp are used for coverage correction
   utr3_totalCov <- function(.utr, .cvg, gcComp, mapComp) {
     strand <- as.character(strand(.utr))
@@ -122,7 +110,7 @@ get_UTR3TotalCov <- function(utr3, totalCov,
       view <- compensation(view, mapComp, start, end)
     }
     if (FFT) {
-      lapply(view, function(.ele) {
+      view <- lapply(view, function(.ele) {
         apply(.ele, 2, fft.smooth, p = fft.sm.power)
       })
     } else {
@@ -130,28 +118,9 @@ get_UTR3TotalCov <- function(utr3, totalCov,
     }
   }
   
-  if(is.null(BPPARAM)){
-    utr3TotalCov <- mapply(utr3_totalCov, utr3[seqnames], 
-                           totalCov[seqnames],
-                           gcCompensation[seqnames],
-                           mappabilityCompensation[seqnames],
-                           SIMPLIFY = FALSE)
-  } else {
-    utr3TotalCov <- bptry(bpmapply(utr3_totalCov, utr3[seqnames], 
-                           totalCov[seqnames],
-                           gcCompensation[seqnames],
-                           mappabilityCompensation[seqnames],
-                           SIMPLIFY = FALSE,
-                           BPPARAM = BPPARAM))
-    while (!all(bpok(utr3TotalCov))){
-      utr3TotalCov <- bptry(bpmapply(utr3_totalCov, utr3[seqnames], 
-                                     totalCov[seqnames],
-                                     gcCompensation[seqnames],
-                                     mappabilityCompensation[seqnames],
-                                     SIMPLIFY = FALSE,
-                                     BPREDO = utr3TotalCov,
-                                     BPPARAM = BPPARAM))
-    }
-  }
-  utr3TotalCov
+  view <- utr3_totalCov(.utr = chr.utr3,
+                        .cvg = chr.totalCov, 
+                        gcComp = gcCompensation,
+                        mapComp = mappabilityCompensation)
+  view
 }

@@ -2,14 +2,25 @@
 # On Load / Attach
 ########################################################
 
-InPASDefaults <- list(
-    InPAS.threads = 1,
-    InPAS.logging = TRUE,
-    InPAS.genome = NULL,
-    InPAS.lockname = tempfile(tmpdir = "."),
-    InPAS.chr2exclude = NULL,
-    InPAS.verbose = TRUE)
+InPASDefaults <- list(InPAS.logging = TRUE,
+                      InPAS.genome = NULL,
+                      InPAS.TxDb = NULL,
+                      InPAS.EnsDb = NULL,
+                      InPAS.outdir = "./InPAS.out",
+                      InPAS.sqliteDb = NULL,
+                      InPAS.lockname = tempfile(tmpdir = "."),
+                      InPAS.chr2exclude = c("chrM", "MT", 
+                                            "chrPltd", "Pltd"),
+                      InPAS.verbose = TRUE)
 
+#' A function called upon a package is attached to the search path
+#'
+#' @param libname library name
+#' @param pkgname package name
+#'
+#' @keywords internal
+#' @importFrom utils packageVersion
+#' 
 .onAttach <- function(libname, pkgname){
     #if (!interactive()) return()
     v <- packageVersion("InPAS")
@@ -20,12 +31,7 @@ InPASDefaults <- list(
     op <- options()
     toset <- !(names(InPASDefaults) %in% names(op))
     if (any(toset)) {options(InPASDefaults[toset])}
-    if (!.isWholenumber(options()[["InPAS.threads"]]) || 
-       options()[["InPAS.threads"]] == 1 )
-    {
-        addInPASThreads()
-    }
-    invisible()
+    invisible(0)
 }
 
 #############################################################################
@@ -37,23 +43,17 @@ InPASDefaults <- list(
 #' This function will set the default requirement of filtering out scaffolds
 #' from all analysis.
 #' 
-#' @param chr2exclude A character vector indicating the scaffolds/chromosomes to
-#' be excluded from all InPAS analyses.
-#' @param genome An object of [BSGenome::BSgenome-class]
+#' @param chr2exclude A character vector, NA or NULL, specifying chromosomes or 
+#'   scaffolds to be excluded for InPAS analysis. `chrM` and alternative scaffolds
+#'   representing different haplotypes should be excluded.
 #' @import BSgenome
 #' @export
-addChr2Exclude <- function(chr2exclude = NULL, genome = NULL)
+addChr2Exclude <- function(chr2exclude = c("chrM", "MT", 
+                                           "Pltd", "chrPltd"))
 {
-    if (is.null(genome) || !is(genome, "BSgenome")) 
+    if (!is.null(chr2exclude) && !is.character(chr2exclude)) 
     {
-        stop("genome must be an object of the BSgenome class!")
-    }
-    if (!is.null(chr2exclude) && 
-        (!is.character(chr2exclude) || 
-         !any(chr2exclude %in% seqnames(genome)))) 
-    {
-        stop("chr2exclude must be NULL or valid seqnames compatible with ",
-             "seqnames of the genome!")
+        stop("chr2exclude must be NULL, or a character vector!")
     }
     options(InPAS.chr2exclude = chr2exclude)
 }
@@ -64,80 +64,12 @@ addChr2Exclude <- function(chr2exclude = NULL, genome = NULL)
 #' 
 #' @export
 getChr2Exclude <- function(){
-    .chr2Exclude <- options()[["InPAS.chr2exclude"]]
-    if (!is.null(.chr2Exclude)){
-        if (is.character(.chr2Exclude)){
-            .chr2Exclude
-        } else {
-            NULL
-        }
+    chr2exclude <- options()$InPAS.chr2exclude
+    if (is.null(chr2exclude) || is.character(chr2exclude)){
+        return(chr2exclude)
     } else {
-        NULL
-    }
-}
-
-################################################################################
-# Parallel Information
-################################################################################
-
-#' Add a globally-applied number of threads to use for parallel computing.
-#' 
-#' This function will set the number of threads to be used for parallel computing
-#' across all InPAS functions.
-#' 
-#' @param threads The default number of threads to be used for parallel execution
-#'  across all InPAS functions.
-#' This value is stored as a global environment variable.
-#' This can be overwritten on a per-function basis using the given function's 
-#' `threads` parameter.
-#' @param force A logical(1). If you request more than the total number of CPUs
-#' minus 2, InPAS will set `threads` to `(nCPU - 2)`. To bypass this, setting 
-#' `force = TRUE` will use the number provided to `threads`.
-#' @importFrom parallel detectCores
-#' @export
-addInPASThreads <- function(threads = floor(parallel::detectCores()/ 2),
-                            force = FALSE){
-    
-    if (tolower(.Platform$OS.type) == "windows"){
-        message("Detected windows OS, setting threads to 1.")
-        threads <- 1
-    } else {
-        detectedCores <- parallel::detectCores()
-        if (threads >= detectedCores - 1){
-            if (force) {
-                message("Input threads is equal to or greater than ncores minus 1 (",
-                        detectedCores - 1,")\nOverriding since force = TRUE.")
-            } else {
-                message("Input threads is equal to or greater than ncores minus 1 (",
-                        detectedCores - 1,")\nSetting cores to ncores minus 2.",
-                        "Set force = TRUE to set above this number!")
-                threads <- detectedCores - 2
-            }
-        }
-    }
-    message("Setting default number of Parallel threads to ", threads, ".")
-    options(InPAS.threads = as.integer(round(threads)))
-}
-
-#' Get globally-applied number of threads to use for parallel computing.
-#' 
-#' This function will get the number of threads to be used for parallel execution across all InPAS functions.
-#' 
-#' @export
-getInPASThreads <- function(){
-    .InPASThreads <- options()[["InPAS.threads"]]
-    if (!is.null(.InPASThreads)){
-        if (!.isWholenumber(.InPASThreads)){
-            message("option(InPAS.threads) : ", .InPASThreads, 
-                    " is not an integer. \nDid you mistakenly set this to a value ",
-                    "without addInPASThreads? Resetting to default!")
-            addInPASThreads()
-            options()[["InPAS.threads"]]
-        } else {
-            .InPASThreads
-        }
-    } else {
-        1
+        stop("chr to exclude is not set correctly.\n",
+             "Please call addChr2Exclude() first")
     }
 }
 
@@ -149,97 +81,19 @@ getInPASThreads <- function(){
 #' 
 #' This function will set the genome across all InPAS functions.
 #' 
-#' @param genome A string or BSgenome object indicating the default genome to be
-#' used for all InPAS functions. Currently supported values include "hg19",
-#' "hg38","mm9", and "mm10". This value is stored as a global environment 
+#' @param genome A BSgenome object indicating the default genome to be
+#' used for all InPAS functions. This value is stored as a global environment 
 #' variable. This can be overwritten on a per-function basis using the given 
 #' function's `genome` parameter.
-#' For something other than one of the currently supported, see `forge_BSgenome`.
-#' @param install  A boolean value indicating whether the `BSgenome` object 
-#' associated with the provided `genome` should be automatically installed 
-#' if it is not currently installed. This is useful for helping reduce
-#' user download requirements.
-#' @importFrom BiocManager install
+#' @import BSgenome
 #' @export
-addInPASGenome <- function(genome = NULL, install = TRUE){
-    supportedGenomes <- c("hg19","hg38","mm9","mm10")
-    
-    if (tolower(genome) %ni% supportedGenomes){
-        message("Genome : ", genome, " is not currently supported by InPAS.")
-        message("Currently supported genomes : ", paste0(supportedGenomes, 
-                                                         collapse = ","))
-        if (is(genome, "BSgenome"))
-        {
-            message("Setting default genome to ", metadata(genome)$genome, ".")
-            options(InPAS.genome = genome)
-        } else {
-            stop("The genome is neither currently supported nor an object of BSgenome. ",
-            "To continue try building a custom BSgenome with forge_BSgenome() ",
-            "and install it first!")
-        }
-    } else {
-        #Check if BSgenome exists!
-        if (tolower(genome)=="hg19"){
-            if (!requireNamespace("BSgenome.Hsapiens.UCSC.hg19", 
-                                 quietly = TRUE)){
-                if (install){
-                    message("BSgenome for hg19 not installed! Now installing by ",
-                            "the following:\n\tBiocManager::install",
-                            "(\"BSgenome.Hsapiens.UCSC.hg19\")")
-                    BiocManager::install("BSgenome.Hsapiens.UCSC.hg19")
-                } else {
-                    stop("BSgenome for hg19 not installed! Please install by ",
-                         "setting install = TRUE or by the following:\n\t",
-                         "BiocManager::install(\"BSgenome.Hsapiens.UCSC.hg19\")")
-                }
-            }
-        } else if (tolower(genome)=="hg38"){
-            if (!requireNamespace("BSgenome.Hsapiens.UCSC.hg38", 
-                                 quietly = TRUE)){
-                if (install){
-                    message("BSgenome for hg38 not installed! Now installing by ",
-                            "the following:\n\tBiocManager::install", 
-                            "(\"BSgenome.Hsapiens.UCSC.hg38\")")
-                    BiocManager::install("BSgenome.Hsapiens.UCSC.hg38")
-                } else {
-                    stop("BSgenome for hg38 not installed! Please install by ",
-                         "setting install = TRUE or by the following:\n\t", 
-                         "BiocManager::install(\"BSgenome.Hsapiens.UCSC.hg38\")")
-                }
-            }
-        } else if (tolower(genome)=="mm9"){
-            if (!requireNamespace("BSgenome.Mmusculus.UCSC.mm9", 
-                                 quietly = TRUE)){
-                if (install){
-                    message("BSgenome for mm9 not installed! Now installing by ",
-                            "the following:\n\tBiocManager::install", 
-                            "(\"BSgenome.Mmusculus.UCSC.mm9\")")
-                    BiocManager::install("BSgenome.Mmusculus.UCSC.mm9")
-                } else {
-                    stop("BSgenome for mm9 not installed! Please install by ",
-                         "setting install = TRUE or by the following:\n\t",
-                         "BiocManager::install(\"BSgenome.Mmusculus.UCSC.mm9\")")
-                }
-            }
-        } else if (tolower(genome)=="mm10"){
-            if (!requireNamespace("BSgenome.Mmusculus.UCSC.mm10",
-                                 quietly = TRUE)){
-                if (install){
-                    message("BSgenome for mm10 not installed! Now installing by ",
-                            "the following:\n\tBiocManager::install",
-                            "(\"BSgenome.Mmusculus.UCSC.mm10\")")
-                    BiocManager::install("BSgenome.Mmusculus.UCSC.mm10")
-                } else {
-                    stop("BSgenome for mm10 not installed! Please install by ",
-                         "setting install = TRUE or by the following:\n\t",
-                         "BiocManager::install(\"BSgenome.Mmusculus.UCSC.mm10\")")
-                }
-            }
-        }
-        genome <- paste0(toupper(substr(genome, 1, 1)), 
-                         substr(genome, 2, nchar(genome)))
-        message("Setting default genome to ", genome, ".")
+addInPASGenome <- function(genome = NULL){
+    if (is(genome, "BSgenome"))
+    {
+        message("Setting default genome to ", metadata(genome)$genome, ".")
         options(InPAS.genome = genome)
+    } else {
+        stop("genome must be a BSgenome object!")
     }
     invisible(0)
 }
@@ -249,36 +103,89 @@ addInPASGenome <- function(genome = NULL, install = TRUE){
 #' This function will retrieve the genome that is currently in use by InPAS. 
 #' @export
 getInPASGenome <- function(){
-    supportedGenomes <- c("hg19","hg38","mm9","mm10")
-    .InPASGenome <- options()[["InPAS.genome"]]
-    
-    if (!is.null(.InPASGenome)){
-        ag <- .InPASGenome
-        if (!is.character(ag) && !is(ag, "BSgenome")){
-            return(NULL)
-        } else if (is.character(ag)) {
-             if(tolower(ag) %in% supportedGenomes){
-                genome <- paste0(toupper(substr(ag, 1, 1)), 
-                                 substr(ag, 2, nchar(ag)))
-                return(genome)
-            } else {
-                stop("option(InPAS.genome) : ", ag, 
-                     " is not currently supported by InPAS.", 
-                     "\nDid you mistakenly set this to a value without ",
-                     "addInPASGenome()?")
-            }
-        } else {
-            return(ag)
-        }
-    } else {
-        return(NULL)
+    .InPASGenome <- options()$InPAS.genome
+    if (!is(.InPASGenome, "BSgenome")){
+        stop("genome is not set. Please call the function\n",
+             "addInPASGenome() first")
     }
+    .InPASGenome
 }
 
-
-#' Add a filename for locking
+#' Add a globally defined TxDb for InPAS functions.
 #'
-#' @param filename A character(1) vector, a path to a file for locking.
+#' @param TxDb An object of [GenomicFeatures::TxDb-class]
+#' @import GenomicFeatures
+#' @export
+#'
+#' @examples
+#' library("TxDb.Hsapiens.UCSC.hg19.knownGene")
+#' addInPASTxDb(TxDb = TxDb.Hsapiens.UCSC.hg19.knownGene)
+
+addInPASTxDb <- function(TxDb = NULL)
+{
+    if (!is(TxDb, "TxDb"))
+    {
+        stop("TxDb must be an object of TxDb!")
+    }
+    message("Setting default TxDb to ", deparse(substitute(TxDb)) , ".")
+    options(InPAS.TxDb = TxDb)
+    invisible(0)
+}
+
+#' Get the globally defined TxDb.
+#'
+#' @return An object of [GenomicFeatures::TxDb-class]
+#' @export
+#'
+#' @examples
+#' library("TxDb.Hsapiens.UCSC.hg19.knownGene")
+#' addInPASTxDb(TxDb = TxDb.Hsapiens.UCSC.hg19.knownGene)
+#' getInPASTxDb()
+
+getInPASTxDb <- function()
+{
+    TxDb <- options()$InPAS.TxDb
+    if (!is(TxDb, "TxDb"))
+    {
+        stop("TxDb is not set. Please call the function\n",
+             "addInPASTxDb() first")
+    }
+    TxDb
+}
+
+#' Add a globally defined EnsDb to some InPAS functions.
+#'
+#' @param EnsDb An object of [ensembldb::EnsDb-class]
+#'
+#' @export
+addInPASEnsDb <- function(EnsDb = NULL)
+{
+    if (!is(EnsDb, "EnsDb"))
+    {
+        stop("EnsDb must be an object of EnsDb!")
+    }
+    message("Setting default EnsDb to ", deparse(substitute(EnsDb)), ".")
+    options(InPAS.EnsDb = EnsDb)
+    invisible(0)
+}
+
+#' Get the globally defined EnsDb.
+#'
+#' @return An object of [ensembldb::EnsDb-class]
+#' @export
+getInPASEnsDb <- function()
+{
+    EnsDb <- options()$InPAS.EnsDb
+    if (!is(EnsDb, "EnsDb"))
+    {
+        stop("EnsDb is not set. Please call the function addInPASEnsDb() first")
+    }
+    EnsDb
+}
+
+#' Add a filename for locking a SQLite database
+#'
+#' @param filename A character(1) vector, specifyong a path to a file for locking.
 #' @export
 addLockName <- function(filename = NULL)
 {
@@ -290,18 +197,96 @@ addLockName <- function(filename = NULL)
     } else {
         file.create(filename)
     }
-    options()["InPAS.lockname"] <- filename
+    options(InPAS.lockname = filename)
     invisible(0)
 }
 
-
-#' Get the path to a file for locking
+#' Get the path to a file for locking the SQLite database 
 #'
 #' @return A path to a file for locking
 #' @export
 
 getLockName <- function()
 {
-    options()["InPAS.lockname"]
+    filename <- options()$InPAS.lockname
+    if (is.null(filename) || !file.exists(filename))
+    {
+        stop("file for locking is not set. please call the function\n",
+             "addLockName() first")
+    }
+    filename
 }
 
+#' Add a globally defined output directory to some InPAS functions.
+#'
+#' @param outdir A character(1) vector, a path with write permission for storing 
+#'   InPAS analysis results. If it doesn't exist, it will be created.
+#' @export
+
+addInPASOutputDirectory <- function(outdir = NULL)
+{
+    if (!is.character(outdir) || length(outdir) != 1)
+    {
+        stop("An output directory for InPAS analysis is required")
+    }
+    if (!dir.exists(outdir)){
+        dir.create(outdir, recursive = TRUE)
+    }
+    outdir <- normalizePath(outdir)
+    options(InPAS.outdir = outdir)
+}
+
+#' Get the path to a output directory for InPAS analysis
+#'
+#' @return a normalized path to a output directory for InPAS analysis
+#' @export
+#'
+getInPASOutputDirectory <- function()
+{
+    outdir <- options()$InPAS.outdir
+    if (!is.character(outdir) || length(outdir) != 1)
+    {
+        stop("outdir is not defined, please call the function\n",
+             "addInPASOutputDirectory() first")
+    }
+    if (!dir.exists(outdir))
+    {
+        dir.create(outdir, recursive = TRUE)
+    }
+    outdir <- normalizePath(outdir)
+}
+
+#' Set up global variables for an InPAS analysis
+#'
+#' @param genome An object [BSgenome::BSgenome-class]. To make things easy, we 
+#'   suggest users creating a [BSgenome::BSgenome-class] instance from the 
+#'   reference genome used for read alignment. For details, see the 
+#'   documentation of [BSgenome::forgeBSgenomeDataPkg()].
+#' @param TxDb An object of [GenomicFeatures::TxDb-class]
+#' @param EnsDb An object of [ensembldb::EnsDb-class]
+#' @param outdir A character(1) vector, a path with write permission for storing
+#'   InPAS analysis results. If it doesn't exist, it will be created.
+#' @param chr2exclude A character vector, NA or NULL, specifying chromosomes or 
+#'   scaffolds to be excluded for InPAS analysis. `chrM` and alternative scaffolds
+#'   representing different haplotypes should be excluded.
+#' @param lockfile A character(1) vector, specifying a file name used for 
+#'   parallel writing to a SQLite database
+#'
+#' @export
+set_globals <- function(genome = NULL,
+                        TxDb = NULL,
+                        EnsDb = NULL,
+                        outdir = NULL,
+                        chr2exclude = c("chrM", "MT", 
+                                        "Pltd", "chrPltd"),
+                        lockfile = tempfile(tmpdir = getInPASOutputDirectory()))
+                                
+{
+    addInPASGenome(genome)
+    addInPASEnsDb(EnsDb)
+    addInPASTxDb(TxDb)
+    addInPASOutputDirectory(outdir)
+    addLockName(lockfile)
+    addChr2Exclude(chr2exclude)
+    invisible(0)
+}

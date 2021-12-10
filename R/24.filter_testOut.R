@@ -7,6 +7,8 @@
 #'   purpose if both are specified; otherwise only other specified thresholds 
 #'   are used for filtering.
 #' @param gp2 tag names involved in group 2
+#' @param outdir A character(1) vector, a path with write permission for storing 
+#'   InPAS analysis results. If it doesn't exist, it will be created.
 #' @param background_coverage_threshold  background coverage cut off value. for
 #'   each group, more than half of the long form should greater than
 #'   background_coverage_threshold. for both group, at least in one group, more
@@ -50,11 +52,25 @@
 filter_testOut <- function(res,
                       gp1,
                       gp2,
+                      outdir = getInPASOutputDirectory(),
                       background_coverage_threshold = 2,
                       P.Value_cutoff = 0.05,
                       adj.P.Val_cutoff = 0.05,
-                      dPDUI_cutoff = 0.3,
-                      PDUI_logFC_cutoff) {
+                      dPDUI_cutoff = 0.2,
+                      PDUI_logFC_cutoff = log2(1.5)) {
+  if (missing(res) || !is(res, "UTR3eSet")) {
+    stop("res is required and must be an object of UTR3eSet")
+  }
+  if (!is.character(outdir) || length(outdir) != 1){
+    stop("An explicit output directory is required")
+  } else {
+    outdir <- file.path(outdir, "010.filtered.dPDUI")
+    if (!dir.exists(outdir)){
+      dir.create(outdir, recursive = TRUE, 
+                 showWarnings = FALSE)
+    }
+    outdir <- normalizePath(outdir)
+  }
   if (missing(gp1) || missing(gp2)) {
     testRes <- res$testRes
     testRes <- testRes[!(is.na(testRes[, "P.Value"]) |
@@ -143,5 +159,6 @@ filter_testOut <- function(res,
   res <- res[, !colnames(res) %in% c("width", "annotatedProximalCP",
                                     "truncated", "fit_value", 
                                     "feature", "exon")]
+  saveRDS(res, file = file.path(outdir, "filtered.dPDUI.RDS"))
   res
 }

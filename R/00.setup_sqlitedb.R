@@ -15,7 +15,7 @@
 #'   name for each sample, such as "treatment" and "control", and a path to the
 #'   bedgraph file for each sample
 #' @param outdir A character(1) vector, a path with write permission for storing 
-#'   the SQLite database. If it doesn't exist, it will be created.
+#'   InPAS analysis results. If it doesn't exist, it will be created.
 #' @import RSQLite DBI
 #' @importFrom utils read.delim
 #' @export
@@ -38,12 +38,13 @@
 #'                                outdir)
 #' }
 
-setup_sqlitedb <- function(metadata, outdir){
+setup_sqlitedb <- function(metadata, 
+                           outdir = getInPASOutputDirectory()){
     if (missing(metadata) || !file.exists(metadata)){
         stop("A path to a tab-delimited file, with columns:",
              "tag, condition, and bedgraph_file, is required")
     }
-    if(missing(outdir)){
+    if(!is.character(outdir) || length(outdir) != 1){
         stop("A path with write permission for storing",
              "the SQLite database is required")
     }
@@ -55,7 +56,8 @@ setup_sqlitedb <- function(metadata, outdir){
     db_conn <- dbConnect(drv = RSQLite::SQLite(), dbname = sqlite_db)
     
     ## Drop existing tables
-    tables <- c("metadata", "chromosome_coverage", 
+    tables <- c("metadata", "genome_anno",
+                "chromosome_coverage", 
                 "sample_coverage", "total_coverage",
                 "utr3_total_coverage", "CPsites",
                 "utr3cds_coverage")
@@ -82,14 +84,22 @@ setup_sqlitedb <- function(metadata, outdir){
     metadata$depth <- 0
     dbWriteTable(db_conn, "metadata", metadata, 
                  overwrite = TRUE, row.names = FALSE)
+    ## create table: genome_anno
+    res <- dbSendStatement(db_conn, "CREATE TABLE 
+                genome_anno (
+                type TEXT,
+                anno_file TEXT,
+                PRIMARY KEY(type));")
+    dbClearResult(res)
     
     ## create table: sample_coverage
     res <- dbSendStatement(db_conn, "CREATE TABLE 
                 sample_coverage (
-                tag TEX,
+                tag TEXT,
                 chr TEXT,
                 coverage_file TEXT,
-                PRIMARY KEY(tag, chr));")
+                PRIMARY KEY(tag, chr),
+                FOREIGN KEY(tag) REFERENCES metadata(tag));")
     dbClearResult(res)
     
     ## create table: chromosome_coverage
@@ -97,14 +107,17 @@ setup_sqlitedb <- function(metadata, outdir){
                 chromosome_coverage (
                 chr TEXT,
                 coverage_file TEXT,
-                PRIMARY KEY(chr));")
+                PRIMARY KEY(chr),
+                FOREIGN KEY(chr) REFERENCES sample_coverage(chr));")
     dbClearResult(res)
     
     ## create table: total_coverage for CP site search
     res <- dbSendStatement(db_conn, "CREATE TABLE 
                 total_coverage (
+                chr TEXT,
                 coverage_file TEXT,
-                PRIMARY KEY (coverage_file));")
+                PRIMARY KEY (chr),
+                FOREIGN KEY(chr) REFERENCES sample_coverage(chr));")
     dbClearResult(res)
     
     ## create table: utr3_total_coverage for CP site search
@@ -112,7 +125,8 @@ setup_sqlitedb <- function(metadata, outdir){
                 utr3_total_coverage (
                 chr TEXT,
                 coverage_file TEXT,
-                PRIMARY KEY(chr));")
+                PRIMARY KEY(chr),
+                FOREIGN KEY(chr) REFERENCES sample_coverage(chr));")
     dbClearResult(res)
     
     ## create table: CPsites
@@ -120,7 +134,8 @@ setup_sqlitedb <- function(metadata, outdir){
                 CPsites (
                 chr TEXT,
                 cpsites_file TEXT,
-                PRIMARY KEY(chr));")
+                PRIMARY KEY(chr),
+                FOREIGN KEY(chr) REFERENCES sample_coverage(chr));")
     dbClearResult(res)
     
     ## create table utr3cds_coverage
@@ -128,12 +143,29 @@ setup_sqlitedb <- function(metadata, outdir){
                 utr3cds_coverage (
                 chr TEXT,
                 coverage_file TEXT,
-                PRIMARY KEY (chr));")
+                PRIMARY KEY (chr),
+                FOREIGN KEY(chr) REFERENCES sample_coverage(chr));")
     dbClearResult(res)
     
     if (!any(dbListTables(db_conn) %in% tables)) {
         stop("The SQLite database has NOT been sep up correctly!")
     }
     dbDisconnect(db_conn)
+    options(InPAS.sqliteDb = sqlite_db)
+    sqlite_db
+}
+
+#' Get the path to an SQLite database
+#'
+#' @return A path to an SQLite database
+#' @export
+getInPASSQLiteDb <- function()
+{
+    sqlite_db <- options()$InPAS.sqliteDb
+    if (!file.exists(sqlite_db))
+    {
+        stop("SQLite database doesn't exist!\n",
+             "Please call setup_sqlitedb() first")
+    }
     sqlite_db
 }

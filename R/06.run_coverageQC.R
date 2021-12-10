@@ -10,9 +10,9 @@
 #' @param TxDb An object of [GenomicFeatures::TxDb-class]
 #' @param edb An object of [ensembldb::EnsDb-class]
 #' @param genome An object of [BSgenome::BSgenome-class]
-#' @param removeScaffolds A logical(1) vector, whether the scaffolds should be
-#'   removed from the genome If you use a TxDb containing alternative
-#'   scaffolds, you'd better to remove the scaffolds.
+#' @param chr2exclude A character vector, NA or NULL, specifying chromosomes or 
+#'   scaffolds to be excluded for InPAS analysis. `chrM` and alternative scaffolds
+#'   representing different haplotypes should be excluded.
 #' @param cutoff_readsNum cutoff reads number. If the coverage in the location
 #'   is greater than cutoff_readsNum,the location will be treated as covered by
 #'   signal
@@ -32,22 +32,25 @@
 #'   cutoff_expdGene_sampleRate
 #' @param cutoff_expdGene_sampleRate See cutoff_expdGene_cvgRate
 #' @param which an object of [GenomicRanges::GRanges-class] or NULL. If it is
-#'   not NULL, only the exons overlapping the given ranges are used. For fast 
+#'   not NULL, only the exons overlapping the given ranges are used. For fast
 #'   data quality control, set which to Granges for one or a few large 
 #'   chromosomes.
-#' @param BPPARAM an optional [BiocParallel::BiocParallelParam-class] instance
-#'   determining the parallel back-end to be used during evaluation, or a list
-#'   of BiocParallelParam instances, to be applied in sequence for nested calls
-#'   to bplapply. It can be set to NULL or bpparam() 
 #' @param ... Not used yet
 #'
-#' @return A data frame with colnames: gene.coverage.rate: coverage per base for
-#'   all genes, expressed.gene.coverage.rate: coverage per base for expressed
-#'   genes, UTR3.coverage.rate: coverage per base for all 3'
-#'   UTRs,UTR3.expressed.gene.subset.coverage. rate: coverage per base for 3'
-#'   UTRs of expressed genes. and rownames: the names of coverage
+#' @return A data frame as described below.
+#' \describe{
+#'   \item{gene.coverage.rate}{overage per base for
+#'   all genes}
+#'   \item{expressed.gene.coverage.rate}{coverage per base for expressed
+#'   genes} 
+#'   \item{UTR3.coverage.rate}{coverage per base for all 3'
+#'   UTRs}
+#'   \item{UTR3.expressed.gene.subset.coverage.rate}{coverage per base for 3'
+#'   UTRs of expressed genes}
+#'   \item{rownames}{the names of coverage}
+#' } 
 #' @import GenomicRanges
-#' @importFrom BiocParallel bptry bpok bplapply bpparam
+#' @importFrom parallel detectCores mclapply mcmapply
 #'
 #' @export
 #' @author Jianhong Ou, Haibo Liu
@@ -75,6 +78,12 @@
 #'    sqlite_db <- setup_sqlitedb(metadata = file.path(outdir, 
 #'                                                     "metadata.txt"),
 #'                                outdir)
+#'    tx <- parse_TxDb(sqlite_db = sqlite_db,
+#'                     TxDb = TxDb,
+#'                     edb = edb,
+#'                     genome = genome,
+#'                     outdir = outdir,
+#'                     chr2exclude = "chrM")
 #'    coverage <- list()
 #'    for (i in seq_along(bedgraphs)){
 #'    coverage[[tags[i]]] <- get_ssRleCov(bedgraph = bedgraphs[i],
@@ -82,36 +91,43 @@
 #'                             genome = genome,
 #'                             sqlite_db = sqlite_db,
 #'                             outdir = outdir,
-#'                             removeScaffolds = TRUE,
+#'                             chr2exclude = "chrM",
 #'                             BPPARAM = NULL)
 #'    }
-#'    coverage_files <- assemble_allCov(sqlite_db, 
-#'                                     outdir, 
-#'                                     genome, 
-#'                                     removeScaffolds = FALSE)
+#'    chr_coverage <- assemble_allCov(sqlite_db, 
+#'                                    seqname = "chr6",
+#'                                    outdir, 
+#'                                    genome, 
+#'                                    chr2exclude = "chrM")
 #'    run_coverageQC(sqlite_db, TxDb, edb, genome,
-#'                   removeScaffolds = TRUE,
+#'                   chr2exclude = "chrM",
 #'                   which = GRanges("chr6",
-#'                      ranges = IRanges(98013000, 140678000)))
+#'                   ranges = IRanges(98013000, 140678000)))
 #' }
 
-run_coverageQC <- function(sqlite_db, TxDb, edb, genome,
-                         cutoff_readsNum = 1,
-                         cutoff_expdGene_cvgRate = 0.1,
-                         cutoff_expdGene_sampleRate = 0.5,
-                         removeScaffolds = FALSE,
-                         BPPARAM = NULL,
-                         which = NULL, ...) {
+run_coverageQC <- function(sqlite_db, 
+                           TxDb = getInPASTxDb(), 
+                           edb = getInPASEnsDb(),
+                           genome = getInPASGenome(),
+                           cutoff_readsNum = 1,
+                           cutoff_expdGene_cvgRate = 0.1,
+                           cutoff_expdGene_sampleRate = 0.5,
+                           chr2exclude = getChr2Exclude(),
+                           which = NULL, ...) {
   stopifnot(is(TxDb, "TxDb"))
   stopifnot(is(edb, "EnsDb"))
   stopifnot(is(genome, "BSgenome"))
+  if (!is.null(chr2exclude) && !is.character(chr2exclude))
+  {
+    stop("chr2Exclude must be NULL or a character vector")
+  }
   if (missing(sqlite_db) || length(sqlite_db) != 1 ||
       !file.exists(sqlite_db)) {
     stop("sqlite_db, a path to the SQLite database is required!")
   }
 
-  seqnames <- trim_seqnames(genome, removeScaffolds)
-  seqLen <- get_seqLen(genome, removeScaffolds)
+  seqnames <- trim_seqnames(genome, chr2exclude)
+  seqLen <- get_seqLen(genome, chr2exclude)
   
   if (length(which) > 0) {
     stopifnot(is(which, "GRanges"))
@@ -125,8 +141,10 @@ run_coverageQC <- function(sqlite_db, TxDb, edb, genome,
 
   db_conn <- dbConnect(drv = RSQLite::SQLite(), dbname= sqlite_db)
   coverage_files <- dbGetQuery(db_conn, 
-                               "SELECT * FROM sample_coverage")
+                               "SELECT * FROM sample_coverage;")
   coverage_files <- coverage_files[coverage_files$chr %in% seqnames, ]
+  anno_files <- dbGetQuery(db_conn,
+                        "SELECT * FROM genome_anno;")
   dbDisconnect(db_conn)
   
   if (nrow(coverage_files) < 1){
@@ -138,8 +156,10 @@ run_coverageQC <- function(sqlite_db, TxDb, edb, genome,
   
   seqRle <- sapply(seqLen, function(.ele) {Rle(0, .ele)},
                    simplify = FALSE)
-
-  tx <- parse_TxDb(TxDb, edb, removeScaffolds = removeScaffolds)
+  
+  tx <- readRDS(anno_files[anno_files$type == "transcripts", 2])
+  # tx <- parse_TxDb(sqlite_db, TxDb, edb, 
+  #                  chr2exclude = chr2exclude)
   exon <- tx %>% plyranges::select(exon, feature, gene)
   UTR3 <- tx %>%
     plyranges::filter(feature %in% c("lastutr3", "utr3")) %>%
@@ -204,25 +224,9 @@ run_coverageQC <- function(sqlite_db, TxDb, edb, genome,
   exon.unlist <-
     if (!is(exon.s, "GRangesList")) GRangesList(exon.s) else exon.s
   exon.unlist <- unlist(exon.s)
-
-  if (is.null(BPPARAM)){
-    exon.cvg <- lapply(coverage, feature.cvg,
-                       feature = exon.s,
-                       seqnames = seqnames, seqRle = seqRle)
-  } else {
-    exon.cvg <-bptry(bplapply(coverage, feature.cvg,
-                       feature = exon.s,
-                       seqnames = seqnames, seqRle = seqRle,
-                       BPPARAM = BPPARAM))
-    while (!all(bpok(exon.cvg))) {
-      exon.cvg <-bptry(bplapply(coverage, feature.cvg,
-                                feature = exon.s,
-                                seqnames = seqnames, seqRle = seqRle, 
-                                BPREDO = exon.cvg, BPPARAM = BPPARAM))
-    }
-  }
-
-
+  exon.cvg <- lapply(coverage, feature.cvg,
+                     feature = exon.s,
+                     seqnames = seqnames, seqRle = seqRle)
   names(exon.cvg) <- names(coverage)
 
   ## coverage per sample in each column

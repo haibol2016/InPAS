@@ -4,26 +4,26 @@
 #'   chromosome-level seqnames are kept.
 #'
 #' @param genome An object of [BSgenome::BSgenome-class]
-#' @param removeScaffolds A logical(1) vector, whether the scaffolds should be
-#'   removed from the genome. If you use a TxDb containing alternative
-#'   scaffolds, you'd better to remove the scaffolds. To make things easy, we 
-#'   suggest users creating a [BSgenome::BSgenome-class] instance from the 
-#'   reference genome used for read alignment. For details, see the 
-#'   documentation of [BSgenome::forgeBSgenomeDataPkg()].
+#' @param chr2exclude A character vector, NA or NULL, specifying chromosomes or 
+#'   scaffolds to be excluded for InPAS analysis. `chrM` and alternative scaffolds
+#'   representing different haplotypes should be excluded.
 #'   
 #' @return An character vector containing filtered seqnames
 #' @author Jianhong Ou, Haibo Liu
 #' @importFrom BSgenome getSeq matchPWM
 #' @keywords internal
 
-trim_seqnames <- function(genome, removeScaffolds = FALSE) 
+trim_seqnames <- function(genome = getInPASGenome(), 
+                          chr2exclude = getChr2Exclude()) 
 {
   if (!is(genome, "BSgenome")) {
     stop("genome must be an object of BSgenome")
-  } 
-  seqnames <- seqnames(genome)
-  if (removeScaffolds) {
-    seqnames <- seqnames[grepl("^(chr)?(\\d+|[XY])$", seqnames)]
   }
+  if (!is.null(chr2exclude) && !is.character(chr2exclude))
+  {
+    stop("chr2exclude must be NULL or a character vector")
+  }
+  seqnames <- seqnames(genome)
+  seqnames <- seqnames[!seqnames %in% chr2exclude]
   seqnames
 }

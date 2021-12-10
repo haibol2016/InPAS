@@ -43,9 +43,6 @@ run_limmaAnalysis <- function(UTR3eset,
   if (!is(contrast.matrix, "matrix")) {
     stop("contrast.matrix must be an object of matrix")
   }
-  if (!is(UTR3eset, "UTR3eSet")) {
-    stop("UTR3eset must be an object of UTR3eSet")
-  }
   short <- UTR3eset@short
   long <- UTR3eset@long
   if (!identical(rownames(short), rownames(long))) {

@@ -20,7 +20,7 @@ remove_convergentUTR3s <- function(x) {
       reorder = FALSE
     )
     y <- y[-length(y)]
-    id <- find_valley(y, 1, length(y), 1, filterByPval = FALSE)
+    id <- InPAS:::find_valley(y, 1, length(y), 1, filterByPval = FALSE)
     if (length(id) > 0) {
       if (id < 3) id <- 3
       pval <- try(t.test(y[1:(id - 2)], y[-(1:(id + 2))])$p.value,

@@ -15,26 +15,29 @@
 #' @param genome a [BSgenome::BSgenome-class] object
 #' @param step An integer (1) vector, specifying the step size used for adjusting
 #'   the proximal or distal CP sites using the Naive Bayes classifier from the
-#'   cleanUpdTSeq package. Default 1. It can be in the range of 1 to 10.
+#'   cleanUpdTSeq package. Default 1. It can be in the range of 1 to 5.
+#' @param mc.cores An integer(1) vector, number of cores for the mc*apply 
+#'   function of the parallel package
 #' @seealso [search_proximalCPs()], [get_PAscore2()]
 #' @keywords internal
 #' @author Jianhong Ou
 
-adjust_distalCPs <- function(distalCPs, 
-                      classifier, 
-                      classifier_cutoff,
-                      shift_range, 
-                      genome, 
-                      step = 1) {
+adjust_distalCPs <- function(distalCPs,
+                             classifier, 
+                             classifier_cutoff,
+                             shift_range, 
+                             genome, 
+                             step = 1,
+                             mc.cores = 1){
   dCPs <- distalCPs$dCPs
   next.exon.gap <- distalCPs$next.exon.gap
-  gap.cov <- mapply(function(gap, cp, ID, strand) {
+  generate_gapCov <- function(gap, cp, ID, strand) {
     if (cp > 0) {
       coor <- as.integer(gsub("^.*_SEP_", "", names(gap[1:cp])))
       start <- coor[length(coor)]
       end <- ifelse(length(coor) > 2 * shift_range,
-        coor[length(coor) - 2 * shift_range],
-        coor[1]
+                    coor[length(coor) - 2 * shift_range],
+                    coor[1]
       )
       pos <- seq(start, end, by = ifelse(strand == "+",
                                          -1 * step, 1 * step))
@@ -43,21 +46,21 @@ adjust_distalCPs <- function(distalCPs,
     } else {
       NULL
     }
-  }, next.exon.gap, dCPs$distalCP,
-  1:length(next.exon.gap), dCPs$strand,
-  SIMPLIFY = FALSE
-  )
-
+  }
+  
+  gap.cov <- mapply(generate_gapCov, next.exon.gap, 
+                    dCPs$distalCP, 1:length(next.exon.gap), 
+                    dCPs$strand, SIMPLIFY = FALSE)
   gap.cov <- do.call(rbind, gap.cov)
-  if (length(gap.cov) > 0) {
-    idx <- get_PAscore2(
-      dCPs$seqnames[gap.cov[, "ID"]],
-      gap.cov[, "pos"],
-      dCPs$strand[gap.cov[, "ID"]],
-      gap.cov[, "idx"],
-      gap.cov[, "ID"],
-      genome, classifier, classifier_cutoff
-    )
+  if (nrow(gap.cov) > 0) {
+    idx <- InPAS:::get_PAscore2(dCPs$seqnames[gap.cov[, "ID"]],
+                        gap.cov[, "pos"],
+                        dCPs$strand[gap.cov[, "ID"]],
+                        gap.cov[, "idx"],
+                        gap.cov[, "ID"],
+                        genome, classifier,
+                        classifier_cutoff,
+                        mc.cores)
     distalCPs$dCPs[idx$idx.gp, "distalCP"] <- idx$idx
   }
   distalCPs

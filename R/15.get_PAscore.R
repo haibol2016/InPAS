@@ -11,7 +11,8 @@
 #' @param genome an object of [BSgenome::BSgenome-class]
 #' @param ups the number of upstream bases for PAS search.
 #' @param dws the number of downstream bases for PAS search.
-#'
+#' @param mc.cores integer(1), number of cores for the mc*apply function of the 
+#'   parallel package
 #' @return A list containing offset positions after PA score-based filtering
 #' @import GenomicRanges
 #' @importFrom BSgenome getSeq matchPWM
@@ -19,14 +20,15 @@
 #' @keywords internal
 #' @author Jianhong Ou
 
-get_PAscore <- function(seqname, 
-                    pos, 
-                    str, 
-                    idx, 
-                    PWM, 
-                    genome, 
-                    ups = 50, 
-                    dws = 50) {
+get_PAscore <- function(seqname,
+                        pos, 
+                        str, 
+                        idx, 
+                        PWM, 
+                        genome, 
+                        ups = 50, 
+                        dws = 50,
+                        mc.cores = 1){
   pos <- pos[!is.na(pos)]
   if (length(pos) < 1) {
     return(NULL)
@@ -34,11 +36,20 @@ get_PAscore <- function(seqname,
   start <- pos - ups
   start[start < 1] <- 1
   end <- pos + dws
-  gr <- GRanges(seqname, IRanges(start, end, names = as.character(pos)),
-    strand = str
-  )
+  gr <- GRanges(seqname, IRanges(start, end, 
+                                 names = as.character(pos)),
+                strand = str)
   seq <- getSeq(genome, gr)
-  mT <- lapply(seq, matchPWM, pwm = PWM, min.score = "70%", with.score = TRUE)
+  
+  if (.Platform$OS.type == "windows" || mc.cores == 1){
+    mT <- lapply(seq, matchPWM, pwm = PWM, 
+                 min.score = "70%", with.score = TRUE)
+  } else {
+    mT  <- mclapply(seq, matchPWM, pwm = PWM, 
+                    min.score = "70%", with.score = TRUE,
+                    mc.cores = mc.cores)
+  }
+  
   hits <- sapply(mT, function(.ele) {
     if (!is(.ele, "XStringViews")) {
       return(FALSE)

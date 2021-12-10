@@ -17,26 +17,21 @@
 #'   based based on the available computing resource: CPUs and RAM. For 
 #'   BATCH_SIZE of 10, 15-20G RAM is needed. This parameter affects the time for
 #'   converting coverage from bedgraph to Rle.
-#' @param removeScaffolds A logical(1) vector, whether the scaffolds should be
-#'   removed from the genome If you use a TxDb containing alternative
-#'   scaffolds, you'd better to remove the scaffolds.
+#' @param chr2exclude A character vector, NA or NULL, specifying chromosomes or 
+#'   scaffolds to be excluded for InPAS analysis. `chrM` and alternative scaffolds
+#'   representing different haplotypes should be excluded.
 #' @param outdir A character(1) vector, a path with write permission for storing 
-#'   the coverage data. If it doesn't exist, it will be created.
+#'   InPAS analysis results. If it doesn't exist, it will be created.
 #' @param BPPARAM an optional [BiocParallel::BiocParallelParam-class] instance
 #'   determining the parallel back-end to be used during evaluation, or a list
 #'   of BiocParallelParam instances, to be applied in sequence for nested calls
 #'   to bplapply. It can be set to NULL or bpparam()
-#'   
-#' @return A list of lists containing read coverage as Rle instances of 
-#'   [S4Vectors::Rle-class] representing read coverage for each chromosome of
-#'   a given sample, as described below.
+#' @return A data frame, as described below.
 #'   \describe{
 #'            \item{tag}{the sample tag}
-#'            \describe{
-#'                     \item{chr1}{coverage as Rle instance for chr1}
-#'                     \item{chr2}{coverage as Rle instance for chr2}
-#'                     \item{chrN}{coverage as Rle instance for chrN}
-#'                    }
+#'            \item{chr}{chromosome name}
+#'            \item{coverage_file}{path to Rle coverage files for each chromosome
+#'             per sample tag}
 #'           }
 #' @importFrom dplyr as_tibble mutate filter arrange bind_rows group_by
 #'   left_join summarise n bind_cols syms desc pull
@@ -66,12 +61,12 @@
 #'    sqlite_db <- setup_sqlitedb(metadata = file.path(outdir, 
 #'                                                     "metadata.txt"),
 #'                                outdir)
-#'    coverage <- get_ssRleCov(bedgraph = bedgraphs[1], 
+#'    coverage_info <- get_ssRleCov(bedgraph = bedgraphs[1], 
 #'                           tag = tags[1],
 #'                           genome = genome,
 #'                           sqlite_db = sqlite_db,
 #'                           outdir = outdir,
-#'                           removeScaffolds = TRUE,
+#'                           chr2exclude = "chrM",
 #'                           BPPARAM = NULL)
 #'    # check read coverage depth
 #'    db_connect <- dbConnect(drv = RSQLite::SQLite(), dbname = sqlite_db)
@@ -81,13 +76,13 @@
 
 get_ssRleCov <- function(bedgraph,
                          tag,
-                         genome,
+                         genome = getInPASGenome(),
                          sqlite_db,
-                         outdir,
+                         outdir = getInPASOutputDirectory(),
                          BATCH_SIZE = 10L,
-                         removeScaffolds = FALSE,
+                         chr2exclude = getChr2Exclude(),
                          BPPARAM = NULL) {
-    if (missing(genome) || !is(genome, "BSgenome")) {
+    if (!is(genome, "BSgenome")) {
         stop("genome,an object of BSgenome, required.")
     }
     if (missing(tag) || missing(bedgraph)) {
@@ -99,21 +94,23 @@ get_ssRleCov <- function(bedgraph,
     if (!file.exists(bedgraph)) {
         stop("bedgraph file does not exist")
     }
-    if (missing(outdir))
+    if (!is.character(outdir) || length(outdir) != 1)
     {
-        stop("A writable output directory is", 
-             " required for storing huge coverage data!")
+        stop("A writable output directory is required!")
     }
     if (missing(sqlite_db) || !file.exists(sqlite_db)){
         stop("The SQLite database for InPAS is required!")
     }
+    if (!is.null(chr2exclude) && !is.character(chr2exclude))
+    {
+        stop("chr2Exclude must be NULL, or a character vector")
+    }
     lock_filename <- getLockName()
-    if (is.null(lock_filename) || !file.exists(lock_filename)) 
+    if (!file.exists(lock_filename)) 
     {
         stop("lock_filename must be an existing file.",
              "Please call addLockName() first!")
     }
-    
     seqnames.bedfile <-
         as.data.frame(read_tsv(
             bedgraph, comment = "#",
@@ -122,7 +119,7 @@ get_ssRleCov <- function(bedgraph,
                              X2 = "-", X3 = "-", X4 = "-")
         ))[, 1]
     
-    seqnames <- trim_seqnames(genome, removeScaffolds)
+    seqnames <- trim_seqnames(genome, chr2exclude)
     
     seqStyle <- seqlevelsStyle(genome)
     seqStyle.bed <- seqlevelsStyle(levels(seqnames.bedfile))
@@ -138,14 +135,14 @@ get_ssRleCov <- function(bedgraph,
     
     ## save coverage file of each chr of a sample into a directory
     ## called "samplewise_RleCov"
-    outdir <- file.path(outdir, "samplewise_RleCov", tag)
+    outdir <- file.path(outdir, "002.samplewise.RleCov", tag)
     if (!dir.exists(outdir))
     {
         dir.create(outdir, recursive = TRUE)
     }
     outdir <- normalizePath(outdir, mustWork = TRUE)
     
-    seqLen <- get_seqLen(genome, removeScaffolds)
+    seqLen <- get_seqLen(genome, chr2exclude)
     
     summaryFunction <- function(seqname) {
         seqL <- seqLen[seqname]
@@ -221,7 +218,7 @@ get_ssRleCov <- function(bedgraph,
     }
     
     ## get coverage
-    cov <- list()
+    #cov <- list()
     cvg <- list()
     x <- seq_along(seqnames)
     y <- split(x, ceiling(x / BATCH_SIZE))
@@ -254,22 +251,20 @@ get_ssRleCov <- function(bedgraph,
         })
     }))
     
-    for (i in seq_along(y)) {
-        for (j in seq_along(seqnames[y[[i]]])) {
-            cov[[tag]][[seqnames[y[[i]]][j]]] <- cvg[[i]][[j]][[1]]
-        }
-    }
+    # for (i in seq_along(y)) {
+    #     for (j in seq_along(seqnames[y[[i]]])) {
+    #         cov[[tag]][[seqnames[y[[i]]][j]]] <- cvg[[i]][[j]][[1]]
+    #     }
+    # }
     rm(cvg)
     gc()
     
     filename_df <- data.frame(tag = tag, chr = seqnames, 
                               coverage_file = coverage_file)
-    
     tryCatch(
         {
             file_lock <- flock::lock(lock_filename)
-            db_conn <- dbConnect(drv = RSQLite::SQLite(), 
-                                 dbname= sqlite_db)
+            db_conn <- dbConnect(drv = RSQLite::SQLite(), dbname= sqlite_db)
             res <- dbSendStatement(db_conn,
                                    paste0("UPDATE metadata SET depth = ",
                                           depth, " WHERE tag = '",
@@ -280,8 +275,6 @@ get_ssRleCov <- function(bedgraph,
                                    paste0("DELETE FROM sample_coverage WHERE tag = '",
                                           tag, "';"))
             dbClearResult(res)
-            # Rollback on failure
-            on.exit(try(dbExecute(db_conn, "ROLLBACK TRANSACTION")))
             res <- dbSendStatement(db_conn, 
                                    "INSERT INTO 
                        sample_coverage (tag, chr, coverage_file) 
@@ -294,5 +287,5 @@ get_ssRleCov <- function(bedgraph,
         }, finally = {
             dbDisconnect(db_conn)
             unlock(file_lock)})
-    cov
+    filename_df
 }

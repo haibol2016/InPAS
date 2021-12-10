@@ -43,6 +43,6 @@ find_segmentationSites <- function(.ele,
     cov_diff_tmp[1:i] <- cov_diff_tmp[1:i] - short_UTR_abun[i]
     cov_diff[i] <- mean(cov_diff_tmp^2)
   }
-  idx <- find_valley(cov_diff, ss, se, n, savedID)
+  idx <- InPAS:::find_valley(cov_diff, ss, se, n, savedID)
   return(list(cov_diff = cov_diff, idx = idx))
 }

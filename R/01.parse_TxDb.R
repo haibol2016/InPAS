@@ -33,12 +33,17 @@ assign_feature <- function(gr, feature_alt = "utr3") {
 #' BioMart/Ensembl/GenCode. For instruction, see Vignette of the
 #' GenomicFeatures. The UCSC reference genomes and their
 #' annotation can be very cumbersome.
-#'
+#' 
+#' @param sqlite_db A path to the SQLite database for InPAS, i.e. the output of
+#'   [setup_sqlitedb()].
 #' @param TxDb An object of [GenomicFeatures::TxDb-class]
 #' @param edb An object of [ensembldb::EnsDb-class]
-#' @param removeScaffolds A logical(1) vector, whether the scaffolds should be
-#'   removed from the genome If you use a TxDb containing alternative
-#'   scaffolds, you'd better to remove the scaffolds.
+#' @param genome An object of [BSgenome::BSgenome-class]
+#' @param chr2exclude A character vector, NA or NULL, specifying chromosomes or 
+#'   scaffolds to be excluded for InPAS analysis. `chrM` and alternative scaffolds
+#'   representing different haplotypes should be excluded.
+#' @param outdir A character(1) vector, a path with write permission for storing 
+#'   InPAS analysis results. If it doesn't exist, it will be created.
 #' @return A [GenomicRanges::GRanges-class] object for gene models
 #'
 #' @import GenomicFeatures
@@ -54,32 +59,81 @@ assign_feature <- function(gr, feature_alt = "utr3") {
 #'
 #' @examples
 #' library("EnsDb.Hsapiens.v86")
+#' library("BSgenome.Hsapiens.UCSC.hg19")
 #' library("GenomicFeatures")
+#' 
+#' ## set a sqlite database
+#' bedgraphs <- system.file("extdata",c("Baf3.extract.bedgraph",
+#'                                      "UM15.extract.bedgraph"), 
+#'                          package = "InPAS")
+#' tags <- c("Baf3", "UM15")
+#' metadata <- data.frame(tag = tags, 
+#'                        condition = c("Baf3", "UM15"),
+#'                        bedgraph_file = bedgraphs)
+#' outdir = tempdir()
+#' write.table(metadata, file =file.path(outdir, "metadata.txt"), 
+#'             sep = "\t", quote = FALSE, row.names = FALSE)
+#' sqlite_db <- setup_sqlitedb(metadata = 
+#'                             file.path(outdir, "metadata.txt"),
+#'                             outdir)
+#'
 #' samplefile <- system.file("extdata",
 #'                          "hg19_knownGene_sample.sqlite",
 #'                           package = "GenomicFeatures")
 #' TxDb <- loadDb(samplefile)
 #' edb <- EnsDb.Hsapiens.v86
-#'
-#' parsed_Txdb <- parse_TxDb(TxDb, edb, 
-#'                           removeScaffolds = TRUE)
+#' genome <- BSgenome.Hsapiens.UCSC.hg19
+#' seqnames <- seqnames(BSgenome.Hsapiens.UCSC.hg19)
+#' chr2exclude <- c("chrM", "chrMT", 
+#'                  seqnames[grepl("_(hap\\d+|fix|alt)$", 
+#'                           seqnames, perl = TRUE)])
+#' parsed_Txdb <- parse_TxDb(sqlite_db, TxDb, edb, genome,
+#'                           chr2exclude = chr2exclude)
 
-parse_TxDb <- function(TxDb = NULL, edb = NULL,
-                      removeScaffolds = FALSE) {
-  if (is.null(TxDb) || !is(TxDb, "TxDb")) {
+parse_TxDb <- function(sqlite_db,
+                       TxDb = getInPASTxDb(), 
+                       edb = getInPASEnsDb(),
+                       genome = getInPASGenome(),
+                       chr2exclude = getChr2Exclude(),
+                       outdir = getInPASOutputDirectory()) {
+  if (missing(sqlite_db) || length(sqlite_db) != 1 ||
+      !file.exists(sqlite_db)) {
+    stop("sqlite_db, a path to the SQLite database is required!")
+  }
+  
+  if (!is(TxDb, "TxDb")) {
     stop("TxDb must be an object of TxDb!")
   }
 
-  if (is.null(edb) || !is(edb, "EnsDb")) {
+  if (!is(edb, "EnsDb")) {
     stop("edb must be an object of EnsDb!")
   }
-
-  if (removeScaffolds) {
-    seqlevels(TxDb) <- seqlevels(TxDb)[grepl("^(chr)?(\\d+|[XY])$",
-      seqlevels(TxDb),
-      perl = TRUE
-    )]
+  if (!is(genome, "BSgenome"))
+  {
+    stop("genome must be a BSgenome object!")
   }
+  if (!is.null(chr2exclude) && !is.character(chr2exclude))
+  {
+    stop("chr2Exclude must be NULL or a character vector!")
+  }
+  if(!is.character(outdir) || length(outdir) != 1){
+    stop("A path with write permission for storing \n",
+         "the SQLite database is required!")
+  }
+  if (!dir.exists(outdir)){
+    dir.create(outdir, recursive = TRUE)
+  }
+  outdir <- normalizePath(outdir)
+  seqnames <- trim_seqnames(genome = genome,
+                            chr2exclude = chr2exclude)
+  seqlevels <- seqlevels(TxDb)
+  seqlevels <- seqlevels[!seqlevels %in% chr2exclude]
+  if (!all(seqlevels %in% seqnames))
+  {
+    stop("chromosome names in TxDb and BSgenome are not consistent!",
+         "\nPlease make sure they match.")
+  }
+  seqlevels(TxDb) <- seqlevels
 
   ## get all transcripts
   tx <- unlist(transcriptsBy(TxDb, by = "gene")) %>%
@@ -205,4 +259,23 @@ parse_TxDb <- function(TxDb = NULL, edb = NULL,
     tx <- tx %>% dplyr::mutate(symbol = gene)
   }
   tx <- tx %>% plyranges::as_granges()
+  tx_file <-file.path(outdir, "00.parsed.TxDb.RDS")
+  saveRDS(tx, file = tx_file)
+  filename_df <- data.frame(type = "transcripts", anno_file = tx_file)
+  db_conn <- dbConnect(drv = RSQLite::SQLite(), dbname = sqlite_db)
+  
+  ## remove existing record for the same "tag"
+  res <- dbSendStatement(db_conn,
+                         paste0("DELETE FROM genome_anno ",
+                         "WHERE type = 'transcripts';"))
+  dbClearResult(res)
+  
+  res <- dbSendStatement(db_conn, 
+                         "INSERT INTO 
+                          genome_anno (type, anno_file) 
+                          VALUES (:type, :anno_file);", 
+                          filename_df)
+  dbClearResult(res)
+  dbDisconnect(db_conn)
+  tx
 }
