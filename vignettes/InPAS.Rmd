@@ -49,13 +49,14 @@ suppressPackageStartupMessages({
     library(EnsDb.Mmusculus.v79)
     library(cleanUpdTSeq)
     library(RSQLite)
-    library(DBI)
+    library(future.apply)
 })
 ```
 ## Step 1: set up a SQLite database
 Seven tables are created in the database. Table "metadata" stores  the metadata, including information for tag (sample name), condition (experimental treatment group), bedgraph_file (paths to BEDGraph files), and depth (whole genome coverage depth) which is initially set to zeros and later updated during analysis. Tables "sample_coverage", "chromosome_coverage", "total_coverage", "utr3_total_coverage", "CPsites", and "utr3cds_coverage" store names of intermediate files and the chromosome and tag (sample name) relevant to the files.   
 
 ```{r setup_sqlitedb}
+plan(sequential)
 data_dir <- system.file("extdata", package = "InPAS")
 bedgraphs <- c(file.path(data_dir, "Baf3.extract.bedgraph"), 
                file.path(data_dir, "UM15.extract.bedgraph"))
@@ -103,7 +104,6 @@ set_globals(genome = BSgenome.Hsapiens.UCSC.hg19,
             TxDb = TxDb,
             EnsDb = EnsDb.Hsapiens.v86,
             outdir = tempdir(),
-            threads = 1L,
             chr2exclude = chr2exclude,
             lockfile = tempfile())
 utr3_anno <- 
@@ -125,23 +125,22 @@ set_globals(genome = BSgenome.Mmusculus.UCSC.mm10,
             TxDb = TxDb.Mmusculus.UCSC.mm10.knownGene,
             EnsDb = EnsDb.Mmusculus.v79,
             outdir = tempdir(),
-            threads = 1L,
             chr2exclude = "chrM",
             lockfile = tempfile())
 
 tx <- parse_TxDb(sqlite_db = sqlite_db,
-                   TxDb = getInPASTxDb(),
-                   edb = getInPASEnsDb(),
-                   genome = getInPASGenome(),
-                   outdir = getInPASOutputDirectory(),
-                   chr2exclude = getChr2Exclude())
+                 TxDb = getInPASTxDb(),
+                 edb = getInPASEnsDb(),
+                 genome = getInPASGenome(),
+                 outdir = getInPASOutputDirectory(),
+                 chr2exclude = getChr2Exclude())
+                   
 
 # load R object: utr3.mm10
 data(utr3.mm10)
 
 ## convert the GRanges into GRangesList for the 3' UTR annotation
-utr3.mm10 <- split(utr3.mm10, 
-                   seqnames(utr3.mm10), 
+utr3.mm10 <- split(utr3.mm10,  seqnames(utr3.mm10), 
                    drop = TRUE)
 ```
 
@@ -169,8 +168,7 @@ coverage[[tags[i]]] <- get_ssRleCov(bedgraph = bedgraphs[i],
                                     genome = genome,
                                     sqlite_db = sqlite_db,
                                     outdir = outdir,
-                                    chr2exclude = getChr2Exclude(),
-                                    BPPARAM = NULL)
+                                    chr2exclude = getChr2Exclude())
 }
 coverage <- assemble_allCov(sqlite_db,
                             seqname = "chr6",
@@ -182,6 +180,12 @@ coverage <- assemble_allCov(sqlite_db,
 At this point, users can check the data quality in terms of coverage for all and expressed genes and 3' UTRs using `run_coverageQC`. This function output summarized coverage metrics: gene.coverage.rate, expressed.gene.coverage.rate, UTR3.coverage.rate, and UTR3.expressed.gene.subset.coverage.rate. The coverage rate of quality data should be greater than 0.75 for 3' UTRs of expressed genes.
 
 ```{r coverage_QC}
+if (.Platform$OS.type == "windows")
+{
+  plan(multisession)
+} else {
+  plan(multicore)
+}
 run_coverageQC(sqlite_db, 
                TxDb = getInPASTxDb(), 
                edb = getInPASEnsDb(), 
@@ -189,6 +193,7 @@ run_coverageQC(sqlite_db,
                chr2exclude = getChr2Exclude(),
                which = GRanges("chr6",
                ranges = IRanges(98013000, 140678000)))
+plan(sequential)
 ```
 ## Step 4: Identifying potential CP sites  
 depth weight, Z-score cutoff thresholds, and  total coverage along 3' UTRs merged across biological replicates within each condition (huge data) or individual sample (non-huge data) are returned by the `setup_CPsSearch` function. Potential novel CP sites are identified for each chromosome using the `search_CPs` function. These potential CP sites can be filtered and/or adjusted using the Naive Bayes classifier provided by _cleanUpdTseq_ and/or by using the polyadenylation scores by simply matching the position-weight matrix (PWM) for the hexamer polyadenylation signal (AAUAAA and the like). 
@@ -208,12 +213,13 @@ prepared_data <- setup_CPsSearch(sqlite_db,
                                  seqname = "chr6",
                                  background = "10K",
                                  TxDb = getInPASTxDb(),
-                                 chr2exclude = getChr2Exclude(),
+                                 chr2exclude = "chrM",
                                  hugeData = TRUE,
                                  outdir = outdir,
-                                 silence = TRUE)
+                                 silence = TRUE,
+                                 coverage_threshold = 5)
 
-cpsites <-  search_CPs(seqname = "chr6",
+CPsites <- search_CPs(seqname = "chr6",
                        sqlite_db = sqlite_db,
                        genome = getInPASGenome(),
                        chr.utr3 = utr3.mm10$chr6,
@@ -221,7 +227,7 @@ cpsites <-  search_CPs(seqname = "chr6",
                        window_size = 100,
                        search_point_START = 50,
                        search_point_END = NA,
-                       cutEnd = 200,
+                       cutEnd = 0,
                        adjust_distal_polyA_end = TRUE,
                        long_coverage_threshold = 2,
                        PolyA_PWM = pwm, 

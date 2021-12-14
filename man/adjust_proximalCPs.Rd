@@ -13,8 +13,7 @@ adjust_proximalCPs(
   classifier_cutoff,
   shift_range,
   search_point_START,
-  step = 1,
-  mc.cores = 1
+  step = 1
 )
 }
 \arguments{
@@ -36,9 +35,6 @@ adjust_proximalCPs(
 
 \item{step}{adjust step, default 1, means adjust by each base by
 cleanUpdTSeq.}
-
-\item{mc.cores}{integer(1), number of cores for the mc*apply function of the
-parallel package}
 }
 \value{
 keep same as \code{\link[=search_proximalCPs]{search_proximalCPs()}}, which can be handled by

@@ -11,7 +11,6 @@
 #' @return A named numeric vector containing lengths per seqname, with the
 #'   seqnames as the names
 #' @seealso [GenomeInfoDb::Seqinfo-class]
-#' @importFrom BSgenome getSeq matchPWM
 #' @keywords internal
 #' @author Jianhong Ou, Haibo Liu
 #' @examples

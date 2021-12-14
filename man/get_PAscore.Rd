@@ -13,7 +13,7 @@ get_PAscore(
   genome,
   ups = 50,
   dws = 50,
-  mc.cores = 1
+  future.chunk.size = NULL
 )
 }
 \arguments{
@@ -34,8 +34,11 @@ polyadenylation signal (PAS), such as AAUAAA.}
 
 \item{dws}{the number of downstream bases for PAS search.}
 
-\item{mc.cores}{integer(1), number of cores for the mc*apply function of the
-parallel package}
+\item{future.chunk.size}{The average number of elements per future
+("chunk"). If Inf, then all elements are processed in a single future.
+If NULL, then argument future.scheduling = 1 is used by default. Users can
+set future.chunk.size = total number of elements/number of cores set for
+the backend. See the future.apply package for details.}
 }
 \value{
 A list containing offset positions after PA score-based filtering

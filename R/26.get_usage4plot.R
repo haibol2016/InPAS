@@ -40,6 +40,7 @@
 #'    sqlite_db <- setup_sqlitedb(metadata = file.path(outdir, 
 #'                                                     "metadata.txt"),
 #'                                outdir)
+#'    addLockName(filename = tempfile())
 #'    coverage <- list()
 #'    for (i in seq_along(bedgraphs)){
 #'    coverage[[tags[i]]] <- get_ssRleCov(bedgraph = bedgraphs[i],
@@ -47,8 +48,7 @@
 #'                             genome = genome,
 #'                             sqlite_db = sqlite_db,
 #'                             outdir = outdir,
-#'                             chr2exclude = "chrM",
-#'                             BPPARAM = NULL)
+#'                             chr2exclude = "chrM")
 #'    }                                      
 #'    data4CPsSearch <- setup_CPsSearch(sqlite_db,
 #'                                      genome,

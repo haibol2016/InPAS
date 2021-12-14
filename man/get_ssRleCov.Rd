@@ -9,10 +9,9 @@ get_ssRleCov(
   tag,
   genome = getInPASGenome(),
   sqlite_db,
+  future.chunk.size = NULL,
   outdir = getInPASOutputDirectory(),
-  BATCH_SIZE = 10L,
-  chr2exclude = getChr2Exclude(),
-  BPPARAM = NULL
+  chr2exclude = getChr2Exclude()
 )
 }
 \arguments{
@@ -30,23 +29,20 @@ documentation of \code{\link[BSgenome:BSgenomeForge]{BSgenome::forgeBSgenomeData
 \item{sqlite_db}{A path to the SQLite database for InPAS, i.e. the output of
 \code{\link[=setup_sqlitedb]{setup_sqlitedb()}}.}
 
+\item{future.chunk.size}{The average number of elements per future
+("chunk"). If Inf, then all elements are processed in a single future.
+If NULL, then argument future.scheduling = 1 is used by default. Users can
+set future.chunk.size = total number of elements/number of cores set for
+the backend. See the future.apply package for details. You may adjust
+this number based based on the available computing resource: CPUs and RAM.
+This parameter affects the time for converting coverage from bedgraph to Rle.}
+
 \item{outdir}{A character(1) vector, a path with write permission for storing
 InPAS analysis results. If it doesn't exist, it will be created.}
-
-\item{BATCH_SIZE}{A integer(1) vector, indicating the number of parallel jobs
-run at the same time per batch. Default, 10. You may adjust this number
-based based on the available computing resource: CPUs and RAM. For
-BATCH_SIZE of 10, 15-20G RAM is needed. This parameter affects the time for
-converting coverage from bedgraph to Rle.}
 
 \item{chr2exclude}{A character vector, NA or NULL, specifying chromosomes or
 scaffolds to be excluded for InPAS analysis. \code{chrM} and alternative scaffolds
 representing different haplotypes should be excluded.}
-
-\item{BPPARAM}{an optional \link[BiocParallel:BiocParallelParam-class]{BiocParallel::BiocParallelParam} instance
-determining the parallel back-end to be used during evaluation, or a list
-of BiocParallelParam instances, to be applied in sequence for nested calls
-to bplapply. It can be set to NULL or bpparam()}
 }
 \value{
 A data frame, as described below.
@@ -78,13 +74,13 @@ if (interactive()) {
    sqlite_db <- setup_sqlitedb(metadata = file.path(outdir, 
                                                     "metadata.txt"),
                                outdir)
+   addLockName()
    coverage_info <- get_ssRleCov(bedgraph = bedgraphs[1], 
                           tag = tags[1],
                           genome = genome,
                           sqlite_db = sqlite_db,
                           outdir = outdir,
-                          chr2exclude = "chrM",
-                          BPPARAM = NULL)
+                          chr2exclude = "chrM")
    # check read coverage depth
    db_connect <- dbConnect(drv = RSQLite::SQLite(), dbname = sqlite_db)
    dbReadTable(db_connect, "metadata")

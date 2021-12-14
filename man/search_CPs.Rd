@@ -14,7 +14,7 @@ search_CPs(
   search_point_START = 50,
   search_point_END = NA,
   cutEnd = 200,
-  adjust_distal_polyA_end = TRUE,
+  adjust_distal_polyA_end = FALSE,
   long_coverage_threshold = 3,
   PolyA_PWM = NA,
   classifier = NA,
@@ -24,11 +24,7 @@ search_CPs(
   two_way = FALSE,
   outdir = getInPASOutputDirectory(),
   silence = FALSE,
-  cluster_type = c("interactive", "multicore", "torque", "slurm", "sge", "lsf",
-    "openlava", "socket"),
-  template_file = NULL,
-  BATCH_SIZE = 50,
-  resources = list(walltime = 3600 * 8, num.cpu = 4, mpp = 1024 * 4, queue = "long")
+  future.chunk.size = 50
 )
 }
 \arguments{
@@ -94,33 +90,28 @@ searched from both directions or not.}
 InPAS analysis results. If it doesn't exist, it will be created.}
 
 \item{silence}{A logical(1), indicating whether progress is reported or not.
-By default, FALSE}
+By default, FALSE.}
 
-\item{cluster_type}{A character (1) vector, indicating the type of cluster
-job management systems. Options are "interactive","multicore", "torque",
-"slurm", "sge", "lsf", "openlava", and "socket". see
-\href{https://mllg.github.io/batchtools/articles/batchtools.html}{batchtools vignette}}
-
-\item{template_file}{A charcter(1) vector, indicating the template file for
-job submitting scripts when cluster_type is set to "torque", "slurm",
-"sge", "lsf", or "openlava".}
-
-\item{BATCH_SIZE}{A integer(1) vector, indicating the number of candidate
-UTRs to process at the same time per batch. Default, 100.}
-
-\item{resources}{A named list specifying the computing resources when
-cluster_type is set to "torque", "slurm", "sge", "lsf", or "openlava". See
-\href{https://mllg.github.io/batchtools/articles/batchtools.html}{batchtools vignette}}
-
-\item{mc.cores}{An integer(1), number of cores for making multicore clusters
-or socket clusters using \pkg{batchtools}, and for \code{\link[parallel:mcdummies]{parallel::mclapply()}}}
+\item{future.chunk.size}{The average number of elements per future
+("chunk"). If Inf, then all elements are processed in a single future.
+If NULL, then argument future.scheduling = 1 is used by default. Users can
+set future.chunk.size = total number of elements/number of cores set for
+the backend. See the documentation of the future_mapply function in the
+future.apply package for details.}
 }
 \value{
 An object of \link[GenomicRanges:GRanges-class]{GenomicRanges::GRanges} containing distal and
 proximal CP site information for each 3' UTR
 }
 \description{
-Estimate the CP sites for UTRs on a given chromosome
+Estimate the CP sites for UTRs on a given chromosome. This is a heavy-lifting
+function. You'd better to use a high performance computer cluster to run an
+analysis with this function. Depending on the type of the HPC cluster
+job management systems, such as  "torque", "slurm", "sge", "lsf", "openlava",
+"local", or "custom",users can set up the computing resources by referring
+to the \href{https://cran.r-project.org/web/packages/future.batchtools/future.batchtools.pdf}{manual}
+and \href{https://cran.r-project.org/web/packages/future.batchtools/vignettes/future.batchtools.html}{vignette}
+of the future.batchtools package.
 }
 \examples{
 if (interactive()) {
@@ -146,6 +137,7 @@ if (interactive()) {
    
    sqlite_db <- setup_sqlitedb(metadata = file.path(outdir, 
                                          "metadata.txt"), outdir)
+   addLockName(filename = tempfile())
    coverage <- list()
    for (i in seq_along(bedgraphs)) {
    coverage[[tags[i]]] <- get_ssRleCov(bedgraph = bedgraphs[i],
@@ -153,8 +145,7 @@ if (interactive()) {
                             genome = genome,
                             sqlite_db = sqlite_db,
                             outdir = outdir,
-                            chr2exclude = "chrM",
-                            BPPARAM = NULL)}
+                            chr2exclude = "chrM")}
    data4CPsSearch <- setup_CPsSearch(sqlite_db,
                                      genome,
                                      chr.utr3 = utr3[["chr6"]],
@@ -174,7 +165,13 @@ if (interactive()) {
    ## load the Naive Bayes classifier model from the cleanUpdTSeq package
    library(cleanUpdTSeq)
    data(classifier)
-   
+   ## the following setting just for demo.
+   if (.Platform$OS.type == "window")
+   {
+      plan(multisession)
+   } else {
+      plan(multicore)
+   }
    CPs <- search_CPs(seqname = "chr6",
                      sqlite_db = sqlite_db, 
                      chr.utr3 = utr3[["chr6"]],

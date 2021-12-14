@@ -4,7 +4,7 @@
 \alias{gcComp}
 \title{Calculate weights for GC composition}
 \usage{
-gcComp(genome, seqnames, window = 50, BPPARAM = NULL)
+gcComp(genome, seqnames, window = 50, future.chunk.size = NULL)
 }
 \arguments{
 \item{genome}{An object of \link[BSgenome:BSgenome-class]{BSgenome::BSgenome}}
@@ -15,10 +15,11 @@ in the same forms of seqnames in the BSgenome}
 \item{window}{size of a sliding window, which optimally is set to the read
 length}
 
-\item{BPPARAM}{an optional \link[BiocParallel:BiocParallelParam-class]{BiocParallel::BiocParallelParam} instance
-determining the parallel back-end to be used during evaluation, or a list
-of BiocParallelParam instances, to be applied in sequence for nested calls
-to bplapply. It can be set to NULL or bpparam()}
+\item{future.chunk.size}{The average number of elements per future
+("chunk"). If Inf, then all elements are processed in a single future.
+If NULL, then argument future.scheduling = 1 is used by default. Users can
+set future.chunk.size = total number of elements/number of cores set for
+the backend. See the future.apply package for details.}
 }
 \value{
 A list of numeric vectors containing the weight (scaffold-level GC\\%

@@ -50,6 +50,7 @@
 #'                        condition = c("Baf3", "UM15"),
 #'                        bedgraph_file = bedgraphs)
 #' outdir = tempdir()
+#' 
 #' write.table(metadata, file =file.path(outdir, "metadata.txt"), 
 #'             sep = "\t", quote = FALSE, row.names = FALSE)
 #' sqlite_db <- setup_sqlitedb(metadata = 
@@ -62,6 +63,7 @@
 #' TxDb <- loadDb(samplefile)
 #' edb <- EnsDb.Hsapiens.v86
 #' genome <- BSgenome.Hsapiens.UCSC.hg19
+#' addInPASOutputDirectory(outdir)
 #' seqnames <- seqnames(BSgenome.Hsapiens.UCSC.hg19)
 #' chr2exclude <- c("chrM", "chrMT", 
 #'                  seqnames[grepl("_(hap\\d+|fix|alt)$", 
@@ -112,7 +114,8 @@ extract_UTR3Anno <- function(sqlite_db,
   
   tx <- parse_TxDb(sqlite_db, TxDb, edb, 
                    genome = genome, 
-                   chr2exclude = chr2exclude)
+                   chr2exclude = chr2exclude,
+                   outdir = outdir)
   ## extract utr3 sharing same start positions from same gene
   if (any(is.na(tx$gene)) || any(tx$gene == "")) {
     stop("unexpected things happend at checking gene IDs", 

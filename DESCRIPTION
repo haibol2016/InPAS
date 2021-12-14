@@ -17,24 +17,19 @@ Description: Alternative polyadenylation (APA) is one of the important post-
              differential usage of APA sites from RNA-Seq data. It leverages 
              cleanUpdTSeq to fine tune identified APA sites by removing false 
              sites.
-biocViews: RNASeq, Sequencing, AlternativeSplicing, Coverage,
-        DifferentialSplicing, GeneRegulation, Transcription,
-        ImmunoOncology
+biocViews: Alternative Polyadenylation, Differential Polyadenylation Site Usage, 
+           RNA-seq, Gene Regulation, Transcription
 License: GPL (>= 2)
-Imports: AnnotationDbi, BSgenome, cleanUpdTSeq, preprocessCore, 
-        IRanges, GenomeInfoDb, depmixS4, limma, BiocParallel, 
-	Biostrings, dplyr, magrittr, plyranges, readr, RSQLite, 
-	DBI, purrr, GenomicFeatures, ggplot2, reshape2, flock,
-	batchtools
+Imports: AnnotationDbi, Biostrings, BSgenome, cleanUpdTSeq, depmixS4, dplyr, 
+         flock, future.apply, GenomeInfoDb, GenomicFeatures, ggplot2, IRanges,
+         limma, magrittr, plyranges, preprocessCore, readr, reshape2, RSQLite,
+         stats, utils
 Depends: R (>= 3.1), methods, Biobase, GenomicRanges, S4Vectors
-Suggests: RUnit, BiocGenerics, future, parallelly, doFuture,
-        future.apply, future.batchools,BiocManager, rtracklayer, 
-        BiocStyle, knitr, markdown, rmarkdown, 
-        EnsDb.Hsapiens.v86,EnsDb.Mmusculus.v79,
-        BSgenome.Hsapiens.UCSC.hg19, 
-        BSgenome.Mmusculus.UCSC.mm10,
-        TxDb.Hsapiens.UCSC.hg19.knownGene,
-        TxDb.Mmusculus.UCSC.mm10.knownGene
+Suggests: BiocGenerics, BiocManager,BiocStyle, BSgenome.Mmusculus.UCSC.mm10,
+          BSgenome.Hsapiens.UCSC.hg19, EnsDb.Hsapiens.v86, EnsDb.Mmusculus.v79,
+          future,knitr, future.batchtools, markdown, rmarkdown, rtracklayer, 
+          RUnit, TxDb.Hsapiens.UCSC.hg19.knownGene, 
+          TxDb.Mmusculus.UCSC.mm10.knownGene
 VignetteBuilder: knitr
 RoxygenNote: 7.1.2
 Roxygen: list(markdown = TRUE)

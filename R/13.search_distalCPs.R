@@ -24,7 +24,6 @@
 #' @return a list
 #' @seealso [get_PAscore2()]
 #' @import S4Vectors
-#' @importFrom parallel detectCores mcmapply
 #' @keywords internal
 #' @author Jianhong Ou
 
@@ -115,7 +114,7 @@ search_distalCPs <- function(chr.cov.merge,
     }
     ## remove utr3---___---utr3, need to improve.
     if (conn_next_utr && length(next.exon.gap) > 50) {
-      next.exon.gap <- InPAS:::remove_convergentUTR3s(next.exon.gap)
+      next.exon.gap <- remove_convergentUTR3s(next.exon.gap)
     }
     annotated.utr3 <- .ele[grepl("utr3", names(.ele))]
     utr3start <- as.numeric(gsub("^.*_SEP_", "", names(annotated.utr3)[1]))

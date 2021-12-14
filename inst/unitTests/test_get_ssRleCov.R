@@ -24,8 +24,7 @@ test_get_ssRleCov <- function() {
                       genome = BSgenome.Mmusculus.UCSC.mm10,
                       sqlite_db = sqlite_db,
                       outdir = outdir,
-                      chr2exclude = NULL,
-                      BPPARAM = NULL)
+                      chr2exclude = NULL)
   cov <- readRDS(cov$coverage_file[cov$tag == "test" & cov$chr == "chr1"])
   checkEquals(rep(2, 5), runLength(cov)[1:5])
   checkEquals(1:5, runValue(cov)[1:5])

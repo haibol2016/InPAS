@@ -36,13 +36,10 @@
 #'             \item{depth.weight}{A named vector containing depth weight}}
 #'
 #' @import S4Vectors Biobase GenomicRanges GenomicFeatures methods
-#' @importFrom BSgenome getSeq matchPWM
-#' @importFrom utils object.size
 #' @importFrom plyranges as_granges complement_ranges disjoin_ranges filter
 #'   group_by mutate reduce_ranges reduce_ranges_directed remove_names select
 #'   set_genome_info shift_downstream summarise
 #' @importFrom GenomeInfoDb seqlengths seqlevelsStyle mapSeqlevels seqlevels
-#' @importFrom parallel detectCores
 #' @export
 #' @author Jianhong Ou, Haibo Liu
 #' 
@@ -71,6 +68,7 @@
 #'     sqlite_db <- setup_sqlitedb(metadata = file.path(outdir,
 #'                                                      "metadata.txt"),
 #'                                 outdir)
+#'     addLockName(filename = tempfile())
 #'     coverage <- list()
 #'     for (i in seq_along(bedgraphs)){
 #'     coverage[[tags[i]]] <- get_ssRleCov(bedgraph = bedgraphs[i],
@@ -106,7 +104,7 @@ setup_CPsSearch <- function(sqlite_db,
                             minZ = 2,
                             cutStart = 10,
                             MINSIZE = 10,
-                            coverage_threshold = 20) {
+                            coverage_threshold = 5) {
     gcCompensation = NA
     mappabilityCompensation = NA
     FFT = FALSE
@@ -193,7 +191,7 @@ setup_CPsSearch <- function(sqlite_db,
                                seqname = seqname,
                                outdir = outdir,
                                genome = genome, 
-                               chr2exclude = getChr2Exclude())
+                               chr2exclude = chr2exclude)
     if (!silence) message("coverage per sample per chromosome done at ", 
                           date(), ".\n")
     
@@ -319,7 +317,7 @@ setup_CPsSearch <- function(sqlite_db,
     if (!silence) message("Preparation for CPsite search done at ", 
                           date(), ".\n")
     
-    if (length(chr.cov.merge) > 0) {
+    if (length(chr.cov.merge) > 0 && length(chr.utr3) > 0) {
         CPsSearch_data <- list(background = background,
                                z2s = z2s, 
                                depth.weight = depth.weight,

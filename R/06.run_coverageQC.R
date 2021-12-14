@@ -50,7 +50,6 @@
 #'   \item{rownames}{the names of coverage}
 #' } 
 #' @import GenomicRanges
-#' @importFrom parallel detectCores mclapply mcmapply
 #'
 #' @export
 #' @author Jianhong Ou, Haibo Liu
@@ -84,6 +83,7 @@
 #'                     genome = genome,
 #'                     outdir = outdir,
 #'                     chr2exclude = "chrM")
+#'    addLockName(filename = tempfile())                
 #'    coverage <- list()
 #'    for (i in seq_along(bedgraphs)){
 #'    coverage[[tags[i]]] <- get_ssRleCov(bedgraph = bedgraphs[i],
@@ -91,8 +91,7 @@
 #'                             genome = genome,
 #'                             sqlite_db = sqlite_db,
 #'                             outdir = outdir,
-#'                             chr2exclude = "chrM",
-#'                             BPPARAM = NULL)
+#'                             chr2exclude = "chrM")
 #'    }
 #'    chr_coverage <- assemble_allCov(sqlite_db, 
 #'                                    seqname = "chr6",
@@ -199,7 +198,7 @@ run_coverageQC <- function(sqlite_db,
     cov <- sample_cov
     cov <- cov[seqnames]
     names(cov) <- seqnames
-    cvg.base <- mapply(function(cov.seq, feature.seq) {
+    cvg.base <- future_mapply(function(cov.seq, feature.seq) {
       vw <- Views(cov.seq,
         start = start(feature.seq),
         end = end(feature.seq)

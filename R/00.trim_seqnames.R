@@ -10,7 +10,6 @@
 #'   
 #' @return An character vector containing filtered seqnames
 #' @author Jianhong Ou, Haibo Liu
-#' @importFrom BSgenome getSeq matchPWM
 #' @keywords internal
 
 trim_seqnames <- function(genome = getInPASGenome(), 

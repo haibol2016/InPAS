@@ -7,8 +7,6 @@
 #'   [extract_UTR3Anno()].
 #' @param outdir A character(1) vector, a path with write permission for storing 
 #'   InPAS analysis results. If it doesn't exist, it will be created.
-#' 
-#' @importFrom parallel detectCores mclapply
 #'
 #' @return An object of [GenomicRanges::GRanges-class] containing GRanges for
 #'   UTRs with alternative CP sites and the corresponding last CDSs.

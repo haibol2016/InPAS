@@ -1,7 +1,14 @@
 #' Estimate the CP sites for UTRs on a given chromosome
 #'
-#' Estimate the CP sites for UTRs on a given chromosome
-#' 
+#' Estimate the CP sites for UTRs on a given chromosome. This is a heavy-lifting
+#' function. You'd better to use a high performance computer cluster to run an
+#' analysis with this function. Depending on the type of the HPC cluster 
+#' job management systems, such as  "torque", "slurm", "sge", "lsf", "openlava",
+#' "local", or "custom",users can set up the computing resources by referring 
+#' to the \href{https://cran.r-project.org/web/packages/future.batchtools/future.batchtools.pdf}{manual}
+#' and \href{https://cran.r-project.org/web/packages/future.batchtools/vignettes/future.batchtools.html}{vignette}
+#'of the future.batchtools package.
+
 #' @param seqname A character(1) vector, specifying a chromosome/scaffold name
 #' @param sqlite_db A path to the SQLite database for InPAS, i.e. the output of
 #'   [setup_sqlitedb()].
@@ -45,35 +52,21 @@
 #'   searched from both directions or not.
 #' @param outdir A character(1) vector, a path with write permission for storing 
 #'   InPAS analysis results. If it doesn't exist, it will be created.
-#' @param BATCH_SIZE A integer(1) vector, indicating the number of candidate 
-#'   UTRs to process at the same time per batch. Default, 100. 
 #' @param silence A logical(1), indicating whether progress is reported or not. 
-#'   By default, FALSE
-#' @param mc.cores An integer(1), number of cores for making multicore clusters
-#'   or socket clusters using \pkg{batchtools}, and for [parallel::mclapply()]
-#' @param cluster_type A character (1) vector, indicating the type of cluster 
-#'   job management systems. Options are "interactive","multicore", "torque", 
-#'   "slurm", "sge", "lsf", "openlava", and "socket". see
-#'   \href{https://mllg.github.io/batchtools/articles/batchtools.html}{batchtools vignette}
-#' @param template_file A charcter(1) vector, indicating the template file for
-#'   job submitting scripts when cluster_type is set to "torque", "slurm", 
-#'   "sge", "lsf", or "openlava".
-#' @param resources A named list specifying the computing resources when 
-#'   cluster_type is set to "torque", "slurm", "sge", "lsf", or "openlava". See
-#'   \href{https://mllg.github.io/batchtools/articles/batchtools.html}{batchtools vignette}
+#'   By default, FALSE.
+#' @param future.chunk.size The average number of elements per future 
+#'   ("chunk"). If Inf, then all elements are processed in a single future.
+#'   If NULL, then argument future.scheduling = 1 is used by default. Users can
+#'   set future.chunk.size = total number of elements/number of cores set for 
+#'   the backend. See the documentation of the future_mapply function in the
+#'   future.apply package for details.
 #' @return An object of [GenomicRanges::GRanges-class] containing distal and
 #'   proximal CP site information for each 3' UTR
 #' @seealso [search_proximalCPs()], [adjust_proximalCPs()],
 #'   [adjust_proximalCPsByPWM()], [adjust_proximalCPsByNBC()],
 #'   [get_PAscore()], [get_PAscore2()]
 #' @import GenomicRanges
-#' @importFrom batchtools makeRegistry batchMap submitJobs waitForJobs 
-#'   reduceResultsList makeClusterFunctionsInteractive makeClusterFunctionsLSF
-#'   makeClusterFunctionsMulticore makeClusterFunctionsOpenLava 
-#'   makeClusterFunctionsSGE makeClusterFunctionsSlurm 
-#'   makeClusterFunctionsSocket makeClusterFunctionsTORQUE
-#' @importFrom BSgenome getSeq matchPWM
-#' @importFrom parallel detectCores
+#' @importFrom future.apply future_mapply future_lapply
 #' @export
 #' @author Jianhong Ou, Haibo Liu
 #' 
@@ -101,6 +94,7 @@
 #'    
 #'    sqlite_db <- setup_sqlitedb(metadata = file.path(outdir, 
 #'                                          "metadata.txt"), outdir)
+#'    addLockName(filename = tempfile())
 #'    coverage <- list()
 #'    for (i in seq_along(bedgraphs)) {
 #'    coverage[[tags[i]]] <- get_ssRleCov(bedgraph = bedgraphs[i],
@@ -108,8 +102,7 @@
 #'                             genome = genome,
 #'                             sqlite_db = sqlite_db,
 #'                             outdir = outdir,
-#'                             chr2exclude = "chrM",
-#'                             BPPARAM = NULL)}
+#'                             chr2exclude = "chrM")}
 #'    data4CPsSearch <- setup_CPsSearch(sqlite_db,
 #'                                      genome,
 #'                                      chr.utr3 = utr3[["chr6"]],
@@ -129,7 +122,13 @@
 #'    ## load the Naive Bayes classifier model from the cleanUpdTSeq package
 #'    library(cleanUpdTSeq)
 #'    data(classifier)
-#'    
+#'    ## the following setting just for demo.
+#'    if (.Platform$OS.type == "window")
+#'    {
+#'       plan(multisession)
+#'    } else {
+#'       plan(multicore)
+#'    }
 #'    CPs <- search_CPs(seqname = "chr6",
 #'                      sqlite_db = sqlite_db, 
 #'                      chr.utr3 = utr3[["chr6"]],
@@ -159,7 +158,7 @@ search_CPs <- function(seqname,
                        search_point_START = 50,
                        search_point_END = NA,
                        cutEnd = 200,
-                       adjust_distal_polyA_end = TRUE,
+                       adjust_distal_polyA_end = FALSE,
                        long_coverage_threshold = 3,
                        PolyA_PWM = NA, 
                        classifier = NA,
@@ -169,21 +168,7 @@ search_CPs <- function(seqname,
                        two_way = FALSE,
                        outdir = getInPASOutputDirectory(),
                        silence = FALSE,
-                       cluster_type = c("interactive","multicore",  
-                                        "torque", "slurm", "sge", 
-                                        "lsf", "openlava", "socket"),
-                       template_file = NULL,
-                       BATCH_SIZE = 50,
-                       resources = list(walltime = 3600*8, num.cpu = 4,
-                                        mpp = 1024*4, queue = "long")) {
-  if (length(mc.cores) != 1 || !is.integer(mc.cores)){
-    stop("mc.cores must be an integer(1) vector")
-  } else if (.Platform$OS.type == "windows") {
-    mc.cores <- 1
-  } else {
-    mc.cores <- min(detectCores() - 1, mc.cores)
-  }
-  
+                       future.chunk.size = 50) {
   if (!is.na(PolyA_PWM)[1]) {
     if (!is(PolyA_PWM, "matrix")) stop("PolyA_PWM must be matrix")
     if (any(rownames(PolyA_PWM) != c("A", "C", "G", "T"))) {
@@ -270,12 +255,11 @@ search_CPs <- function(seqname,
                           PolyA_PWM, 
                           two_way,
                           outdir,
-                          silence,
-                          mc.cores){
+                          silence){
     ## Step 1: search distal CP sites
     if (!silence) message("chromsome ", seqname, 
                           " distal search start at ", date(), ".\n")
-    chr.abun <- InPAS:::search_distalCPs(chr.cov.merge, 
+    chr.abun <- search_distalCPs(chr.cov.merge, 
                                  conn_next_utr3, 
                                  curr_UTR,
                                  window_size = window_size, 
@@ -292,11 +276,11 @@ search_CPs <- function(seqname,
     if (!silence) message("chromsome ", seqname, " distal adjust start at ",
                           date(), ".\n")
     if (adjust_distal_polyA_end && is(classifier, "PASclassifier")) {
-      chr.abun <- InPAS:::adjust_distalCPs(chr.abun,
+      chr.abun <- adjust_distalCPs(chr.abun,
                                    classifier,
                                    classifier_cutoff,
                                    shift_range,
-                                   genome, step, mc.cores)
+                                   genome, step)
       if (!silence) {message("chromsome ", seqname, 
                              " distal adjust done at ", date(), ".\n")}
     }
@@ -304,7 +288,7 @@ search_CPs <- function(seqname,
     ## Step 3: search proximal CP sites
     if (!silence) message("chromsome ", seqname, 
                           " proximal search start at ", date(), ".\n")
-    chr.abun <- InPAS:::search_proximalCPs(chr.abun, curr_UTR,
+    chr.abun <- search_proximalCPs(chr.abun, curr_UTR,
                                    window_size, MINSIZE,
                                    cutEnd, search_point_START,
                                    search_point_END, two_way)
@@ -315,146 +299,58 @@ search_CPs <- function(seqname,
     if (!silence) message("chromsome ", seqname, 
                           " proximal adjust start at ", date(), ".\n")
     if (is(PolyA_PWM, "matrix") || is(classifier, "PASclassifier")) {
-      chr.abun <- InPAS:::adjust_proximalCPs(chr.abun, MINSIZE,
+      chr.abun <- adjust_proximalCPs(chr.abun, MINSIZE,
                                      PolyA_PWM, genome,
                                      classifier,
                                      classifier_cutoff,
                                      shift_range, 
                                      search_point_START,
-                                     step, mc.cores)
+                                     step)
       if (!silence) {message("chromsome ", seqname, 
                              " proximal adjust done at ", date(), ".\n")}
     }
     chr.abun
   }
   
-  if (.Platform$OS.type == "windows"){
-    chr.abun <- get_CPsites(seqname,
-                            chr.cov.merge,
-                            conn_next_utr3,
-                            curr_UTR,
-                            depth.weight,
-                            background, 
-                            z2s,
-                            window_size,
-                            long_coverage_threshold,
-                            adjust_distal_polyA_end,
-                            classifier,
-                            classifier_cutoff,
-                            shift_range,
-                            genome,
-                            step,
-                            MINSIZE,  
-                            search_point_START,
-                            search_point_END ,
-                            cutEnd,
-                            PolyA_PWM, 
-                            two_way,
-                            outdir,
-                            silence,
-                            mc.cores)
-    chr.abun <- polish_CPs(chr.abun)
-  } else {
-    reg  <- makeRegistry(file.dir = paste(outdir, 
-                                           seqname, sep = "_"), 
-                         conf.file = NA,
-                         packages = "InPAS",
-                         seed = 1)
-    cluster_type <- match.arg(cluster_type)
-    
-    if (cluster_type %in% c("lsf", "sge", "slurm", "openlava", "torgue") &&
-        !file.exists(template_file)){
-      stop("template_file doen't exist")
-    }
-    
-    if (cluster_type == "interactive"){
-      reg$cluster.functions = makeClusterFunctionsInteractive(
-        external = FALSE,
-        write.logs = TRUE,
-        fs.latency = 0)
-    } else if (cluster_type == "lsf"){
-      reg$cluster.functions = makeClusterFunctionsLSF(
-        template = template_file,
-        scheduler.latency = 1,
-        fs.latency = 65)
-    } else if (cluster_type == "multicore"){
-      reg$cluster.functions = 
-        makeClusterFunctionsMulticore(ncpus = mc.cores, 
-                                      fs.latency = 0)
-    } else if (cluster_type == "socket"){
-      reg$cluster.functions = 
-        makeClusterFunctionsSocket(ncpus = mc.cores, 
-                                   fs.latency = 65)
-      
-    } else if (cluster_type == "openlava"){
-      reg$cluster.functions = makeClusterFunctionsOpenLava(
-        template = template_file,
-        scheduler.latency = 1,
-        fs.latency = 65)
-    } else if (cluster_type == "sge"){
-      reg$cluster.functions = makeClusterFunctionsSGE(
-        template = template_file,
-        nodename = "localhost",
-        scheduler.latency = 1,
-        fs.latency = 65)
-    } else if (cluster_type == "slurm"){
-      reg$cluster.functions = makeClusterFunctionsSlurm(
-        template = template_file,
-        array.jobs = TRUE,
-        nodename = "localhost",
-        scheduler.latency = 1,
-        fs.latency = 65)
-    } else if (cluster_type == "torque"){
-      reg$cluster.functions = makeClusterFunctionsTORQUE(
-      template = template_file,
-      scheduler.latency = 1,
-      fs.latency = 65)
-    }
-    x <- ceiling(seq_along(curr_UTR) / BATCH_SIZE)
-    curr_UTR <- split(curr_UTR, x)
-    curr_UTR <- as.list(curr_UTR)
-    conn_next_utr3 <- split(conn_next_utr3, x)
-    chr.cov.merge <- split(chr.cov.merge, x)
+  x <- ceiling(seq_along(curr_UTR) / future.chunk.size)
+  curr_UTR <- split(curr_UTR, x)
+  curr_UTR <- as.list(curr_UTR)
+  conn_next_utr3 <- split(conn_next_utr3, x)
+  chr.cov.merge <- split(chr.cov.merge, x)
 
-    batchMap(fun = get_CPsites, 
-             args = list(curr_UTR = curr_UTR,
-                         conn_next_utr3 = conn_next_utr3,
-                         chr.cov.merge = chr.cov.merge),
-             more.args = list(seqname = seqname,
-                              depth.weight = depth.weight,
-                              background = background,
-                              z2s = z2s,
-                              window_size = window_size,
-                              long_coverage_threshold =
-                                long_coverage_threshold,
-                              adjust_distal_polyA_end = 
-                                adjust_distal_polyA_end,
-                              classifier = classifier,
-                              classifier_cutoff = classifier_cutoff,
-                              shift_range = shift_range,
-                              genome = genome,
-                              step = step,
-                              MINSIZE = MINSIZE,  
-                              search_point_START = search_point_START,
-                              search_point_END = search_point_END,
-                              cutEnd = cutEnd,
-                              PolyA_PWM = PolyA_PWM, 
-                              two_way = two_way,
-                              outdir = outdir,
-                              silence = silence,
-                              mc.cores = mc.cores))
-    
-    ## start job
-    submitJobs(resources = resources)
-    while (!waitForJobs(sleep = 120, timeout = Inf)){
-      Sys.sleep(120) 
-    }
-    if (waitForJobs(sleep = 120, timeout = Inf)) {
-      chr.abun <- reduceResultsList()
-    }
-    chr.abun <- do.call("rbind", lapply(chr.abun, InPAS:::polish_CPs))
-  }
-  
+  chr.abun <-
+             future_mapply(FUN = get_CPsites,
+                   curr_UTR = curr_UTR,
+                   conn_next_utr3 = conn_next_utr3,
+                   chr.cov.merge = chr.cov.merge,
+                   MoreArgs = list(seqname = seqname,
+                                   depth.weight = depth.weight,
+                                   background = background,
+                                   z2s = z2s,
+                                   window_size = window_size,
+                                   long_coverage_threshold =
+                                     long_coverage_threshold,
+                                   adjust_distal_polyA_end =
+                                     adjust_distal_polyA_end,
+                                   classifier = classifier,
+                                   classifier_cutoff = classifier_cutoff,
+                                   shift_range = shift_range,
+                                   genome = genome,
+                                   step = step,
+                                   MINSIZE = MINSIZE,
+                                   search_point_START = search_point_START,
+                                   search_point_END = search_point_END,
+                                   cutEnd = cutEnd,
+                                   PolyA_PWM = PolyA_PWM,
+                                   two_way = two_way,
+                                   outdir = outdir,
+                                   silence = silence),
+                   future.stdout = TRUE,
+                   #future.packages = c("InPAS", "cleanUPdTSeq"),
+                   future.chunk.size = 1,
+                   SIMPLIFY = FALSE)
+  chr.abun <- do.call("rbind", unname(lapply(chr.abun, 
+                                             polish_CPs)))
 
   if (!is.null(chr.abun)){
     utr3.shorten.UTR <- chr.utr3 %>%

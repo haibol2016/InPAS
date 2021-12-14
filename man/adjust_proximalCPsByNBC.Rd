@@ -15,8 +15,7 @@ adjust_proximalCPsByNBC(
   classifier_cutoff,
   shift_range,
   search_point_START,
-  step = 1,
-  mc.cores = 1
+  step = 1
 )
 }
 \arguments{
@@ -42,9 +41,6 @@ adjust_proximalCPsByNBC(
 
 \item{step}{adjusting step, default 1, means adjust by each base by
 cleanUpdTSeq.}
-
-\item{mc.cores}{An integer(1) vector, number of cores for the mc*apply
-function of the parallel package}
 }
 \value{
 the offset of positions of CP sites after filter

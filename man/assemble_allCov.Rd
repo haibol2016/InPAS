@@ -61,14 +61,14 @@ if (interactive()) {
                                                     "metadata.txt"),
                                outdir)
    coverage <- list()
+   addLockName(filename = tempfile())
    for (i in seq_along(bedgraphs)){
    coverage[[tags[i]]] <- get_ssRleCov(bedgraph = bedgraphs[i],
                             tag = tags[i],
                             genome = genome,
                             sqlite_db = sqlite_db,
                             outdir = outdir,
-                            chr2exclude = "chrM",
-                            BPPARAM = NULL)
+                            chr2exclude = "chrM")
    }
    chr_coverage <- assemble_allCov(sqlite_db,
                                    seqname = "chr6",

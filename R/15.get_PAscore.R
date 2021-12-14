@@ -11,11 +11,13 @@
 #' @param genome an object of [BSgenome::BSgenome-class]
 #' @param ups the number of upstream bases for PAS search.
 #' @param dws the number of downstream bases for PAS search.
-#' @param mc.cores integer(1), number of cores for the mc*apply function of the 
-#'   parallel package
+#' @param future.chunk.size The average number of elements per future 
+#'   ("chunk"). If Inf, then all elements are processed in a single future.
+#'   If NULL, then argument future.scheduling = 1 is used by default. Users can
+#'   set future.chunk.size = total number of elements/number of cores set for 
+#'   the backend. See the future.apply package for details.
 #' @return A list containing offset positions after PA score-based filtering
 #' @import GenomicRanges
-#' @importFrom BSgenome getSeq matchPWM
 #' @seealso [get_PAscore2()]
 #' @keywords internal
 #' @author Jianhong Ou
@@ -28,7 +30,7 @@ get_PAscore <- function(seqname,
                         genome, 
                         ups = 50, 
                         dws = 50,
-                        mc.cores = 1){
+                        future.chunk.size = NULL){
   pos <- pos[!is.na(pos)]
   if (length(pos) < 1) {
     return(NULL)
@@ -41,14 +43,9 @@ get_PAscore <- function(seqname,
                 strand = str)
   seq <- getSeq(genome, gr)
   
-  if (.Platform$OS.type == "windows" || mc.cores == 1){
-    mT <- lapply(seq, matchPWM, pwm = PWM, 
-                 min.score = "70%", with.score = TRUE)
-  } else {
-    mT  <- mclapply(seq, matchPWM, pwm = PWM, 
+  mT  <- future_lapply(seq, matchPWM, pwm = PWM, 
                     min.score = "70%", with.score = TRUE,
-                    mc.cores = mc.cores)
-  }
+                    future.chunk.size = future.chunk.size)
   
   hits <- sapply(mT, function(.ele) {
     if (!is(.ele, "XStringViews")) {

@@ -8,7 +8,6 @@
 #' @return a numeric(1) vector, containing the chromosome/scaffold -specific GC
 #'   content in the range of 0 to 1
 #' @importFrom Biostrings alphabetFrequency
-#' @importFrom BSgenome getSeq matchPWM
 #' @keywords internal
 #' @author Haibo Liu
 #'
@@ -45,16 +44,17 @@ gcContents <- function(genome, seqname, nonATCGExclude = TRUE) {
 #'  in the same forms of seqnames in the BSgenome
 #' @param window size of a sliding window, which optimally is set to the read
 #'   length
-#' @param BPPARAM an optional [BiocParallel::BiocParallelParam-class] instance
-#'   determining the parallel back-end to be used during evaluation, or a list
-#'   of BiocParallelParam instances, to be applied in sequence for nested calls
-#'   to bplapply. It can be set to NULL or bpparam()
+#' @param future.chunk.size The average number of elements per future 
+#'   ("chunk"). If Inf, then all elements are processed in a single future.
+#'   If NULL, then argument future.scheduling = 1 is used by default. Users can
+#'   set future.chunk.size = total number of elements/number of cores set for 
+#'   the backend. See the future.apply package for details.
 #' @importFrom Biostrings alphabetFrequency toString
 #'   letterFrequencyInSlidingView DNAString
-#' @importFrom BiocParallel bptry bpok bplapply bpparam
 #' @return A list of numeric vectors containing the weight (scaffold-level GC\%
 #'   / GC\% per sliding window) for GC composition-based correction for each 
 #'   chromosome/scaffold.
+#' @importFrom future.apply future_lapply
 #' @author Jianhong Ou, Haibo Liu
 #' @keywords internal
 #' @references Cheung et al. Systematic bias in high-throughput sequencing data
@@ -66,7 +66,8 @@ gcContents <- function(genome, seqname, nonATCGExclude = TRUE) {
 #' InPAS:::gcComp(genome, "chr1")
 #' }
 
-gcComp <- function(genome, seqnames, window = 50, BPPARAM = NULL) {
+gcComp <- function(genome, seqnames, window = 50, 
+                   future.chunk.size = NULL) {
   fref <- sapply(
     seqnames,
     function(seqname) {
@@ -93,15 +94,10 @@ gcComp <- function(genome, seqnames, window = 50, BPPARAM = NULL) {
     ## what if window_gc = 0?
     wk <- fref[seqname] / window_gc[, 1]
   }
-  
-  if (!is.null(BPPARAM)){
-    fdat <- bptry(bplapply(seqnames, window_gc, BPPARAM))
-    while (!all(bpok(fdat))) {
-      fdat <- bptry(bplapply(seqnames, window_gc, BPREDO = fdat, BPPARAM))
-    }
-  } else {
-    fdat <- lapply(seqnames, window_gc)
-  }
+    fdat <- future_lapply(seqnames, window_gc,
+                          future.chunk.size = future.chunk.size,
+                          future.stdout = NA)
+    fdat
 }
 
 #' Calculate weights for mappability-base coverage correction

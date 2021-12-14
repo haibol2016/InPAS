@@ -96,7 +96,7 @@ search_proximalCPs <- function(CPs,
   ## forward
   get_covDiff <- function(.ele, search_point_END) {
     ## for each sample find candidate CPsites
-    fos <- apply(.ele, 2, InPAS:::find_segmentationSites,
+    fos <- apply(.ele, 2, find_segmentationSites,
                  search_point_START = search_point_START,
                  search_point_END = search_point_END)
     cov_diff <- sapply(fos, "[[", "cov_diff")
@@ -104,7 +104,7 @@ search_proximalCPs <- function(CPs,
   }
   
   get_valleyIndex <- function(cov_diff, search_point_END, savedID) {
-    idx <- InPAS:::find_valley(cov_diff, search_point_START,
+    idx <- find_valley(cov_diff, search_point_START,
                        search_point_END,
                        n = 5, savedID = savedID)
     if (search_point_START < MINSIZE) {
@@ -125,7 +125,7 @@ search_proximalCPs <- function(CPs,
     get_covDiff2 <- function(.ele, search_point_END) {
       nr <- nrow(.ele)
       fos <- apply(.ele[nr:1, , drop = FALSE], 2, 
-                   InPAS:::find_segmentationSites,
+                   find_segmentationSites,
                    search_point_START = nr - search_point_END,
                    search_point_END = nr - search_point_START
       )

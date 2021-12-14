@@ -12,15 +12,16 @@
 #'   in the cleanUpdTSeq package.
 #' @param classifier_cutoff A numeric(1) vector. A cutoff of probability that a
 #'   site is classified as true CP sites. The value should be between 0.5 and 1.
-#'   Default, 0.5.
-#' @param mc.cores An integer(1) vector, number of cores for the mc*apply 
-#'   function of the parallel package
+#'   Default, 0.8.
+#' @param future.chunk.size The average number of elements per future 
+#'   ("chunk"). If Inf, then all elements are processed in a single future.
+#'   If NULL, then argument future.scheduling = 1 is used by default. Users can
+#'   set future.chunk.size = total number of elements/number of cores set for 
+#'   the backend. See the future.apply package for details.
 #' @return a data frame
 #' @seealso [get_PAscore()]
 #' @importFrom cleanUpdTSeq buildFeatureVector predictTestSet
 #' @import GenomicRanges
-#' @importFrom BSgenome getSeq matchPWM
-#' @importFrom parallel mclapply
 #' @keywords internal
 #' @author Jianhong Ou
 
@@ -32,7 +33,7 @@ get_PAscore2 <- function(seqname,
                      genome, 
                      classifier, 
                      classifier_cutoff,
-                     mc.cores = 1){
+                     future.chunk.size = NULL){
   if (length(pos) < 1) {
     return(NULL)
   }
@@ -69,11 +70,9 @@ get_PAscore2 <- function(seqname,
     .pred.prob.test[, -2]
   }
   gr_lists <- split(gr.s,  ceiling(seq_along(gr.s) / 100))
-  if (.Platform$OS.type == "windows" || mc.cores == 1){
-    scores <- lapply(gr_lists, nbc_scoring) 
-  } else {
-    scores <- mclapply(gr_lists, nbc_scoring, mc.cores = mc.cores)
-  }
+  
+  scores <- future_lapply(gr_lists, nbc_scoring, 
+                          future.chunk.size = future.chunk.size)
   pred.prob.test <- do.call(rbind, scores)
   
   pred.prob.test <- pred.prob.test[match(names(gr.s), 

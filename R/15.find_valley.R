@@ -15,7 +15,7 @@
 #'
 #' @return a numeric vector containing a number of candidate CP sites.
 #' @keywords internal
-#' @importFrom stats quantile runif
+#' @importFrom stats quantile
 #' @author Jianhong Ou
 
 find_valley <- function(x, 

@@ -10,8 +10,7 @@ adjust_distalCPs(
   classifier_cutoff,
   shift_range,
   genome,
-  step = 1,
-  mc.cores = 1
+  step = 1
 )
 }
 \arguments{
@@ -34,9 +33,6 @@ CP sites.}
 \item{step}{An integer (1) vector, specifying the step size used for adjusting
 the proximal or distal CP sites using the Naive Bayes classifier from the
 cleanUpdTSeq package. Default 1. It can be in the range of 1 to 5.}
-
-\item{mc.cores}{An integer(1) vector, number of cores for the mc*apply
-function of the parallel package}
 }
 \description{
 adjust distal CP sites by cleanUpdTSeq

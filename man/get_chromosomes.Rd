@@ -46,8 +46,7 @@ coverage <- get_ssRleCov(bedgraph = bedgraphs[1],
                          genome = genome,
                          sqlite_db = sqlite_db,
                          outdir = outdir,
-                         chr2exclude = "chrM",
-                         BPPARAM = NULL)
+                         chr2exclude = "chrM")
 get_chromosomes(utr3, sqlite_db)  
 
 }

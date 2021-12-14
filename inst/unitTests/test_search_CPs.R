@@ -37,13 +37,14 @@ generateUTR3 <- function(normal = TRUE) {
 genome <- BSgenome.Mmusculus.UCSC.mm10
 TxDb <- TxDb.Mmusculus.UCSC.mm10.knownGene
 addLockName(filename = tempfile())
+outdir = tempdir()
+addInPASOutputDirectory(outdir)
 
 get_CPs <- function(tags, conditions, filenames,
                     genome, TxDb, utr3){
   metadata <- data.frame(tag = tags, 
                          condition = conditions,
                          bedgraph_file = filenames)
-  outdir = tempdir()
   write.table(metadata, file =file.path(outdir, "metadata.txt"), 
               sep = "\t", quote = FALSE, row.names = FALSE)
   
@@ -57,8 +58,7 @@ get_CPs <- function(tags, conditions, filenames,
                         genome = genome,
                         sqlite_db = sqlite_db,
                         outdir = outdir,
-                        chr2exclude = NULL,
-                        BPPARAM = NULL)
+                        chr2exclude = NULL)
   }
 
   data4CPsitesSearch <- setup_CPsSearch(sqlite_db,
@@ -147,7 +147,6 @@ test_CPsites_utr3Usage <- function() {
   checkCPs(CP$CP, 399, 1000, "novel distal")
   
   sqlite_db <- CP$sqlite_db
-  outdir <- tempdir()                         
   utr3_cds_cov <- get_regionCov(chr.utr3 = utr3,
                                  sqlite_db,
                                  outdir,

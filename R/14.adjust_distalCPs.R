@@ -16,8 +16,6 @@
 #' @param step An integer (1) vector, specifying the step size used for adjusting
 #'   the proximal or distal CP sites using the Naive Bayes classifier from the
 #'   cleanUpdTSeq package. Default 1. It can be in the range of 1 to 5.
-#' @param mc.cores An integer(1) vector, number of cores for the mc*apply 
-#'   function of the parallel package
 #' @seealso [search_proximalCPs()], [get_PAscore2()]
 #' @keywords internal
 #' @author Jianhong Ou
@@ -27,8 +25,7 @@ adjust_distalCPs <- function(distalCPs,
                              classifier_cutoff,
                              shift_range, 
                              genome, 
-                             step = 1,
-                             mc.cores = 1){
+                             step = 1){
   dCPs <- distalCPs$dCPs
   next.exon.gap <- distalCPs$next.exon.gap
   generate_gapCov <- function(gap, cp, ID, strand) {
@@ -53,14 +50,13 @@ adjust_distalCPs <- function(distalCPs,
                     dCPs$strand, SIMPLIFY = FALSE)
   gap.cov <- do.call(rbind, gap.cov)
   if (nrow(gap.cov) > 0) {
-    idx <- InPAS:::get_PAscore2(dCPs$seqnames[gap.cov[, "ID"]],
+    idx <- get_PAscore2(dCPs$seqnames[gap.cov[, "ID"]],
                         gap.cov[, "pos"],
                         dCPs$strand[gap.cov[, "ID"]],
                         gap.cov[, "idx"],
                         gap.cov[, "ID"],
                         genome, classifier,
-                        classifier_cutoff,
-                        mc.cores)
+                        classifier_cutoff)
     distalCPs$dCPs[idx$idx.gp, "distalCP"] <- idx$idx
   }
   distalCPs

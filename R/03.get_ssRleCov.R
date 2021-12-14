@@ -12,20 +12,18 @@
 #'   documentation of [BSgenome::forgeBSgenomeDataPkg()].
 #' @param sqlite_db A path to the SQLite database for InPAS, i.e. the output of
 #'   [setup_sqlitedb()].
-#' @param BATCH_SIZE A integer(1) vector, indicating the number of parallel jobs
-#'   run at the same time per batch. Default, 10. You may adjust this number 
-#'   based based on the available computing resource: CPUs and RAM. For 
-#'   BATCH_SIZE of 10, 15-20G RAM is needed. This parameter affects the time for
-#'   converting coverage from bedgraph to Rle.
+#' @param future.chunk.size The average number of elements per future 
+#'   ("chunk"). If Inf, then all elements are processed in a single future.
+#'   If NULL, then argument future.scheduling = 1 is used by default. Users can
+#'   set future.chunk.size = total number of elements/number of cores set for 
+#'   the backend. See the future.apply package for details. You may adjust 
+#'   this number based based on the available computing resource: CPUs and RAM. 
+#'   This parameter affects the time for converting coverage from bedgraph to Rle.
 #' @param chr2exclude A character vector, NA or NULL, specifying chromosomes or 
 #'   scaffolds to be excluded for InPAS analysis. `chrM` and alternative scaffolds
 #'   representing different haplotypes should be excluded.
 #' @param outdir A character(1) vector, a path with write permission for storing 
 #'   InPAS analysis results. If it doesn't exist, it will be created.
-#' @param BPPARAM an optional [BiocParallel::BiocParallelParam-class] instance
-#'   determining the parallel back-end to be used during evaluation, or a list
-#'   of BiocParallelParam instances, to be applied in sequence for nested calls
-#'   to bplapply. It can be set to NULL or bpparam()
 #' @return A data frame, as described below.
 #'   \describe{
 #'            \item{tag}{the sample tag}
@@ -37,8 +35,7 @@
 #'   left_join summarise n bind_cols syms desc pull
 #' @importFrom GenomeInfoDb seqlengths seqlevelsStyle mapSeqlevels
 #' @import readr RSQLite S4Vectors GenomicRanges flock
-#' @importFrom BiocParallel bptry bpok bplapply bpparam
-#' @importFrom BSgenome getSeq matchPWM
+#' @importFrom future.apply future_lapply
 #' @importFrom magrittr %>%
 #' 
 #' @export
@@ -61,13 +58,13 @@
 #'    sqlite_db <- setup_sqlitedb(metadata = file.path(outdir, 
 #'                                                     "metadata.txt"),
 #'                                outdir)
+#'    addLockName()
 #'    coverage_info <- get_ssRleCov(bedgraph = bedgraphs[1], 
 #'                           tag = tags[1],
 #'                           genome = genome,
 #'                           sqlite_db = sqlite_db,
 #'                           outdir = outdir,
-#'                           chr2exclude = "chrM",
-#'                           BPPARAM = NULL)
+#'                           chr2exclude = "chrM")
 #'    # check read coverage depth
 #'    db_connect <- dbConnect(drv = RSQLite::SQLite(), dbname = sqlite_db)
 #'    dbReadTable(db_connect, "metadata")
@@ -78,10 +75,9 @@ get_ssRleCov <- function(bedgraph,
                          tag,
                          genome = getInPASGenome(),
                          sqlite_db,
+                         future.chunk.size = NULL,
                          outdir = getInPASOutputDirectory(),
-                         BATCH_SIZE = 10L,
-                         chr2exclude = getChr2Exclude(),
-                         BPPARAM = NULL) {
+                         chr2exclude = getChr2Exclude()) {
     if (!is(genome, "BSgenome")) {
         stop("genome,an object of BSgenome, required.")
     }
@@ -218,48 +214,21 @@ get_ssRleCov <- function(bedgraph,
     }
     
     ## get coverage
-    #cov <- list()
-    cvg <- list()
-    x <- seq_along(seqnames)
-    y <- split(x, ceiling(x / BATCH_SIZE))
-    for (i in seq_along(y)) {
-        if (!is.null(BPPARAM))
-        {
-            cvg[[i]] <- bptry(bplapply(seqnames[y[[i]]], 
-                                  summaryFunction, BPPARAM = BPPARAM))
-            while (!all(bpok(cvg))) {
-                cvg[[i]] <- bptry(bplapply(seqnames[y[[i]]], summaryFunction,
-                                      BPREDO = cvg[[i]], BPPARAM = BPPARAM))
-            }
-        } else {
-            cvg[[i]] <- lapply(seqnames[y[[i]]], summaryFunction)
-        }
-        
-    }
-    
-    ## coverage depth
+    cvg <- future_lapply(seqnames, summaryFunction, 
+                         future.stdout = NA,
+                         future.chunk.size = future.chunk.size)
     depth <- sum(sapply(cvg, function(.cov){
-        sum(sapply(.cov, function(.cv) {
-            .cv[[3]]
-        }))
-    }))
-    
-    ## get filenames
-    coverage_file <- do.call("c", lapply(cvg, function(.cov){
-        sapply(.cov, function(.cv) {
-            .cv[[2]]
-        })
-    }))
-    
-    # for (i in seq_along(y)) {
-    #     for (j in seq_along(seqnames[y[[i]]])) {
-    #         cov[[tag]][[seqnames[y[[i]]][j]]] <- cvg[[i]][[j]][[1]]
-    #     }
-    # }
+             .cov[[3]]
+         }))
+    coverage_file <- sapply(cvg, function(.cov){
+        .cov[[2]]
+    })
+
     rm(cvg)
     gc()
     
-    filename_df <- data.frame(tag = tag, chr = seqnames, 
+    filename_df <- data.frame(tag = tag, 
+                              chr = seqnames, 
                               coverage_file = coverage_file)
     tryCatch(
         {

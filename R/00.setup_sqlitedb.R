@@ -16,7 +16,7 @@
 #'   bedgraph file for each sample
 #' @param outdir A character(1) vector, a path with write permission for storing 
 #'   InPAS analysis results. If it doesn't exist, it will be created.
-#' @import RSQLite DBI
+#' @import RSQLite
 #' @importFrom utils read.delim
 #' @export
 #' @author Haibo Liu

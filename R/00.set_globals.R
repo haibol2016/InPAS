@@ -5,10 +5,11 @@
 InPASDefaults <- list(InPAS.logging = TRUE,
                       InPAS.genome = NULL,
                       InPAS.TxDb = NULL,
+                      future.globals.maxSize = +Inf,
                       InPAS.EnsDb = NULL,
-                      InPAS.outdir = "./InPAS.out",
+                      InPAS.outdir = NULL,
                       InPAS.sqliteDb = NULL,
-                      InPAS.lockname = tempfile(tmpdir = "."),
+                      InPAS.lockname = NULL,
                       InPAS.chr2exclude = c("chrM", "MT", 
                                             "chrPltd", "Pltd"),
                       InPAS.verbose = TRUE)
@@ -194,9 +195,8 @@ addLockName <- function(filename = NULL)
         filename <- tempfile()
         message("The file for locking should not pre-exist!\n",
                 "A tempfile ", filename, " is used for locking.")
-    } else {
-        file.create(filename)
     }
+    file.create(filename)
     options(InPAS.lockname = filename)
     invisible(0)
 }

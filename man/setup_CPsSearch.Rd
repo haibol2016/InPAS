@@ -18,7 +18,7 @@ setup_CPsSearch(
   minZ = 2,
   cutStart = 10,
   MINSIZE = 10,
-  coverage_threshold = 20
+  coverage_threshold = 5
 )
 }
 \arguments{
@@ -99,6 +99,7 @@ prepare data for predicting cleavage and polyadenylation (CP) sites
     sqlite_db <- setup_sqlitedb(metadata = file.path(outdir,
                                                      "metadata.txt"),
                                 outdir)
+    addLockName(filename = tempfile())
     coverage <- list()
     for (i in seq_along(bedgraphs)){
     coverage[[tags[i]]] <- get_ssRleCov(bedgraph = bedgraphs[i],

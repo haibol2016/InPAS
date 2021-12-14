@@ -12,8 +12,7 @@ adjust_proximalCPsByPWM(
   strands,
   genome,
   shift_range,
-  search_point_START,
-  mc.cores = 1
+  search_point_START
 )
 }
 \arguments{
@@ -32,9 +31,6 @@ adjust_proximalCPsByPWM(
 \item{shift_range}{the shift range of PWM hits}
 
 \item{search_point_START}{Not use}
-
-\item{mc.cores}{An integer(1) vector, number of cores for the mc*apply
-function of the parallel package}
 }
 \value{
 the offset of positions of CP sites after filter

@@ -3,7 +3,7 @@ pkgs_required <- c("BSgenome.Mmusculus.UCSC.mm10",
                    "EnsDb.Mmusculus.v79",
                    "rtracklayer",
                    "GenomicRanges",
-                   "limma")
+                   "limma", "future.apply")
 for (pkg in pkgs_required)
 {
     require(pkg, character.only = TRUE) || stop(pkg, " can't be loaded!")

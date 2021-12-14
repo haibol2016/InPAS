@@ -12,8 +12,6 @@
 #' @param search_point_START just in case there is no better CP sites
 #' @param step adjust step, default 1, means adjust by each base by
 #'   cleanUpdTSeq.
-#' @param mc.cores integer(1), number of cores for the mc*apply function of the 
-#'   parallel package
 #' @return keep same as [search_proximalCPs()], which can be handled by
 #'   [polish_CPs()].
 #' @seealso [search_proximalCPs()], [polish_CPs()], [adjust_proximalCPsByPWM()],
@@ -29,8 +27,7 @@ adjust_proximalCPs <- function(CPs,
                         classifier_cutoff,
                         shift_range, 
                         search_point_START, 
-                        step = 1,
-                        mc.cores = 1) {
+                        step = 1) {
   dCPs <- CPs$dCPs
   flag <- CPs$flag
   seqnames <- as.character(dCPs$seqnames)
@@ -43,15 +40,14 @@ adjust_proximalCPs <- function(CPs,
   
   ## improvement needed here
   if (is(PolyA_PWM, "matrix")) {
-    idx.list <- InPAS:::adjust_proximalCPsByPWM(
+    idx.list <- adjust_proximalCPsByPWM(
       idx.list, PolyA_PWM, seqnames, starts,
       strands, genome, shift_range,
-      search_point_START,
-      mc.cores)
+      search_point_START)
   }
   cov_diff.list <- CPs$fit_value
   if (is(classifier, "PASclassifier")) {
-    idx.list <- InPAS:::adjust_proximalCPsByNBC(
+    idx.list <- adjust_proximalCPsByNBC(
       idx.list, cov_diff.list,
       seqnames, starts, strands,
       genome,
@@ -59,8 +55,7 @@ adjust_proximalCPs <- function(CPs,
       classifier_cutoff,
       shift_range, 
       search_point_START,
-      step = step,
-      mc.cores)
+      step = step)
   }
   CPs$Predicted_Proximal_APA[flag] <- idx.list[flag]
   CPs
