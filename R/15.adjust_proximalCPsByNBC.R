@@ -14,7 +14,6 @@
 #' @param search_point_START just in case there is no better CP sites
 #' @param step adjusting step, default 1, means adjust by each base by
 #'   cleanUpdTSeq.
-#'   
 #' @return the offset of positions of CP sites after filter
 #' @details the step for calculating is 10, can not do every base base it is
 #'   really very slow.

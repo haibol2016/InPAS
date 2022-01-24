@@ -18,7 +18,7 @@ extract_UTR3Anno(
 \item{sqlite_db}{A path to the SQLite database for InPAS, i.e. the output of
 \code{\link[=setup_sqlitedb]{setup_sqlitedb()}}.}
 
-\item{TxDb}{an object of \link[GenomicFeatures:TxDb-class]{GenomicFeatures::TxDb}}
+\item{TxDb}{An object of \link[GenomicFeatures:TxDb-class]{GenomicFeatures::TxDb}}
 
 \item{edb}{An object of \link[ensembldb:EnsDb-class]{ensembldb::EnsDb}}
 

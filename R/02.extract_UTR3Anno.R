@@ -13,7 +13,7 @@
 #'
 #' @param sqlite_db A path to the SQLite database for InPAS, i.e. the output of
 #'   [setup_sqlitedb()].
-#' @param TxDb an object of [GenomicFeatures::TxDb-class]
+#' @param TxDb An object of [GenomicFeatures::TxDb-class]
 #' @param edb An object of [ensembldb::EnsDb-class]
 #' @param genome An object of [BSgenome::BSgenome-class]
 #' @param chr2exclude A character vector, NA or NULL, specifying chromosomes or 
@@ -26,7 +26,9 @@
 #'   genomes. For other species, user need to adjust this parameter.
 #' @import GenomicRanges
 #' @importFrom IRanges IRanges
-#' @importFrom plyranges as_granges complement_ranges disjoin_ranges filter group_by mutate reduce_ranges reduce_ranges_directed remove_names select set_genome_info shift_downstream summarise
+#' @importFrom plyranges as_granges complement_ranges disjoin_ranges filter 
+#' group_by mutate reduce_ranges reduce_ranges_directed remove_names select 
+#' set_genome_info shift_downstream summarise
 #' @importFrom dplyr as_tibble mutate filter arrange bind_rows group_by
 #'   left_join summarise n
 #'
@@ -112,7 +114,8 @@ extract_UTR3Anno <- function(sqlite_db,
     stop("MAX_EXONS_GAP must be an positive integer")
   }
   
-  tx <- parse_TxDb(sqlite_db, TxDb, edb, 
+  tx <- parse_TxDb(sqlite_db,
+                   TxDb, edb, 
                    genome = genome, 
                    chr2exclude = chr2exclude,
                    outdir = outdir)
@@ -356,124 +359,107 @@ extract_UTR3Anno <- function(sqlite_db,
   #####################################################################
   utr3.last_reduced <- reduce(utr3.last, ignore.strand = FALSE)
   count_overlap <- countOverlaps(utr3.last_reduced, utr3.last)
-  utr3.last_reduced <- utr3.last_reduced[count_overlap > 1]
-
-  utr3.last_ol <- GenomicRanges::findOverlaps(utr3.last_reduced,
-    utr3.last,
-    ignore.strand = TRUE, minoverlap = 1
-  )
-  # non-overlapping utr3
-  utr3.last_isolated <- utr3.last[-unique(subjectHits(utr3.last_ol))]
-
-  # split overlapping utr3.last of the same genes into
-  # compatible segments for coverage calculation
-  # !!! overlapping utr3.last of different genes are removed
-  uniq_pairs <- data.frame(utr3.last_ol)
-
-  uniq_pairs <- split(uniq_pairs[, 2], uniq_pairs[1])
-  utr3.last_overlap_split <- lapply(uniq_pairs, function(.x) {
-    gr <- utr3.last[.x]
-    if (length(unique(gr$gene)) > 1) {
-      gr <- NULL
-    } else {
-      gr_reduced <- reduce(gr)
-
-      strand <- strand(gr_reduced)
-      feature <- gr$feature[1]
-      gene <- gr$gene[1]
-      symbol <- gr$symbol[1]
-
-      if (as.character(strand(gr_reduced)) == "+") {
-        gr <- gr[order(start(gr))]
-        st <- start(gr)
-        segment_start <- st
-        segment_end <- c(st[-1] - 1, end(gr_reduced))
-        end_sort <- gr[order(-end(gr))]
-        transcript <- gr$transcript
-        exon <- gr$exon
-        exon_rank <- gr$exon_rank
-        truncated <- c(
-          rep(TRUE, length(st) - 1),
-          end_sort$truncated[1]
-        )
-        CP <- grep("^proximalCP_", gr$annotatedProximalCP,
-          perl = TRUE, value = TRUE
-        )
-        if (length(CP) >= 1) {
-          CP <- gsub(
-            "_proximalCP", "",
-            paste(CP, collapse = "_")
-          )
-          CP <- paste(CP, paste(end(end_sort)[-1],
-            collapse = "_"
-          ),
-          sep = "_"
-          )
-        } else {
-          CP <- paste("proximalCP", paste(end(end_sort)[-1],
-            collapse = "_"
-          ),
-          sep = "_"
-          )
-        }
+  
+  if (sum(count_overlap > 1) > 0)
+  {
+    utr3.last_reduced <- utr3.last_reduced[count_overlap > 1]
+    
+    utr3.last_ol <- GenomicRanges::findOverlaps(utr3.last_reduced,
+                                                utr3.last,
+                                                ignore.strand = TRUE, minoverlap = 1
+    )
+    # non-overlapping utr3
+    utr3.last_isolated <- utr3.last[-unique(subjectHits(utr3.last_ol))]
+    
+    # split overlapping utr3.last of the same genes into
+    # compatible segments for coverage calculation
+    # !!! overlapping utr3.last of different genes are removed
+    uniq_pairs <- data.frame(utr3.last_ol)
+    
+    uniq_pairs <- split(uniq_pairs[, 2], uniq_pairs[1])
+    utr3.last_overlap_split <- lapply(uniq_pairs, function(.x) {
+      gr <- utr3.last[.x]
+      if (length(unique(gr$gene)) > 1) {
+        gr <- NULL
       } else {
-        gr <- gr[order(end(gr))]
-        end <- end(gr)
-        segment_end <- end
-        segment_start <- c(start(gr_reduced), end[-length(end)] + 1)
-        transcript <- gr$transcript
-        exon <- gr$exon
-        exon_rank <- gr$exon_rank
-        start_sort <- gr[order(start(gr))]
-        truncated <- c(
-          start_sort$truncated[1],
-          rep(TRUE, length(end) - 1)
-        )
-        CP <- grep("^proximalCP_", gr$annotatedProximalCP,
-          perl = TRUE, value = TRUE
-        )
-        if (length(CP) >= 1) {
-          CP <- gsub(
-            "_proximalCP", "",
-            paste(CP, collapse = "_")
+        gr_reduced <- reduce(gr)
+        
+        strand <- strand(gr_reduced)
+        feature <- gr$feature[1]
+        gene <- gr$gene[1]
+        symbol <- gr$symbol[1]
+        
+        if (as.character(strand(gr_reduced)) == "+") {
+          gr <- gr[order(start(gr))]
+          st <- start(gr)
+          segment_start <- st
+          segment_end <- c(st[-1] - 1, end(gr_reduced))
+          end_sort <- gr[order(-end(gr))]
+          transcript <- gr$transcript
+          exon <- gr$exon
+          exon_rank <- gr$exon_rank
+          truncated <- c(
+            rep(TRUE, length(st) - 1),
+            end_sort$truncated[1]
           )
-          CP <- paste(CP, paste(start(start_sort)[-1],
-            collapse = "_"
-          ),
-          sep = "_"
+          CP <- grep("^proximalCP_", gr$annotatedProximalCP,
+                     perl = TRUE, value = TRUE
           )
+          if (length(CP) >= 1) {
+            CP <- gsub("_proximalCP", "", paste(CP, collapse = "_"))
+            CP <- paste(CP, paste(end(end_sort)[-1], collapse = "_"),
+                        sep = "_")
+          } else {
+            CP <- paste("proximalCP", paste(end(end_sort)[-1],
+                                            collapse = "_"), sep = "_")
+          }
         } else {
-          CP <- paste("proximalCP",
-            paste(start(start_sort)[-1],
-              collapse = "_"
-            ),
-            sep = "_"
+          gr <- gr[order(end(gr))]
+          end <- end(gr)
+          segment_end <- end
+          segment_start <- c(start(gr_reduced), end[-length(end)] + 1)
+          transcript <- gr$transcript
+          exon <- gr$exon
+          exon_rank <- gr$exon_rank
+          start_sort <- gr[order(start(gr))]
+          truncated <- c(
+            start_sort$truncated[1],
+            rep(TRUE, length(end) - 1)
           )
+          CP <- grep("^proximalCP_", gr$annotatedProximalCP,
+                     perl = TRUE, value = TRUE
+          )
+          if (length(CP) >= 1) {
+            CP <- gsub("_proximalCP", "", paste(CP, collapse = "_"))
+            CP <- paste(CP, paste(start(start_sort)[-1],
+                                  collapse = "_"), sep = "_")
+          } else {
+            CP <- paste("proximalCP", paste(start(start_sort)[-1], 
+                                            collapse = "_"), sep = "_")
+          }
         }
+        gr <- GRanges(data.frame(
+          seqnames = seqnames(gr_reduced),
+          start = segment_start,
+          end = segment_end,
+          strand = strand(gr_reduced)),
+        exon_rank = exon_rank,
+        transcript = transcript,
+        feature = feature,
+        gene = gene,
+        exon = exon,
+        symbol = symbol,
+        annotatedProximalCP = CP,
+        truncated = truncated
+        )
       }
-      gr <- GRanges(data.frame(
-        seqnames =
-          seqnames(gr_reduced),
-        start = segment_start,
-        end = segment_end,
-        strand = strand(gr_reduced)
-      ),
-      exon_rank = exon_rank,
-      transcript = transcript,
-      feature = feature,
-      gene = gene,
-      exon = exon,
-      symbol = symbol,
-      annotatedProximalCP = CP,
-      truncated = truncated
-      )
-    }
-    gr
-  })
-  rmv_idx <- do.call("c", lapply(utr3.last_overlap_split, is.null))
-  utr3.last_overlap_split <- 
-    unlist(GRangesList(utr3.last_overlap_split[!rmv_idx]))
-  utr3.last <- c(utr3.last_isolated, utr3.last_overlap_split)
+      gr
+    })
+    rmv_idx <- do.call("c", lapply(utr3.last_overlap_split, is.null))
+    utr3.last_overlap_split <- 
+      unlist(GRangesList(utr3.last_overlap_split[!rmv_idx]))
+    utr3.last <- c(utr3.last_isolated, utr3.last_overlap_split)
+  }
 
   ###################################################################
   #    reprocess 3' UTRs with the same start                        #
@@ -556,25 +542,28 @@ extract_UTR3Anno <- function(sqlite_db,
   ###################################################################
   #             Get last CDS for coverage compensation              #
   ###################################################################
-
-  CDS.last <- tx %>%
-    plyranges::filter(feature == "lastCDS") %>%
-    plyranges::filter(transcript %in% utr3.clean$transcript)
-  CDS.last <- CDS.last[match(
-    utr3.clean$transcript,
-    CDS.last$transcript
-  )]
-  mcols(CDS.last) <- mcols(utr3.clean)
-  CDS.last$feature <- "CDS"
-
-  utr3.fixed <- c(utr3.clean, next.exons.gap, CDS.last)
-
-  names(utr3.fixed) <-
-    paste(utr3.fixed$exon, utr3.fixed$symbol,
-      utr3.fixed$feature,
-      sep = "|"
-    )
-  utr3.fixed <- split(utr3.fixed, seqnames(utr3.fixed), drop = TRUE)
+  if (lastCDS %in% tx$feature){
+    CDS.last <- tx %>%
+      plyranges::filter(feature == "lastCDS") %>%
+      plyranges::filter(transcript %in% utr3.clean$transcript)
+    CDS.last <- CDS.last[match(
+      utr3.clean$transcript,
+      CDS.last$transcript
+    )]
+    mcols(CDS.last) <- mcols(utr3.clean)
+    CDS.last$feature <- "CDS"
+    
+    utr3.fixed <- c(utr3.clean, next.exons.gap, CDS.last)
+    names(utr3.fixed) <-
+      paste(utr3.fixed$exon, utr3.fixed$symbol,
+            utr3.fixed$feature,
+            sep = "|"
+      )
+    utr3.fixed <- split(utr3.fixed, seqnames(utr3.fixed), drop = TRUE)
+  } else {
+    utr3.fixed <- c(utr3.clean, next.exons.gap)
+  }
+  
   utrs_file <- file.path(outdir, "01.3UTR.annotation.RDS")
   saveRDS(utr3.fixed, file = utrs_file)
   filename_df <- data.frame(type = "utr3", anno_file = utrs_file)

@@ -56,7 +56,6 @@
 #'                                      seqname = "chr6",
 #'                                      background = "10K",
 #'                                      TxDb = TxDb,
-#'                                      chr2exclude = "chrM",
 #'                                      hugeData = TRUE,
 #'                                      outdir = outdir)
 #'                                      
@@ -134,10 +133,9 @@ get_usage4plot <- function(gr,
     data <- mapply(function(.ele, .str) {
       if (.str) .ele <- .ele[nrow(.ele):1, , drop = FALSE]
       se <- nrow(.ele) - 1
-      os <- apply(.ele, 2, find_segmentationSites,
-                  search_point_START = 1, search_point_END = se
-      )
-      cov_diff <- sapply(os, "[[", "cov_diff")
+      cov_diff <- apply(.ele, 2, calculate_mse,
+                  search_point_START = 1, 
+                  search_point_END = se)
       cov_diff <- rowMeans(cov_diff)
       cvg <- .ele[1:se, , drop = FALSE]
 

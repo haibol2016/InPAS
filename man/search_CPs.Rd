@@ -13,22 +13,27 @@ search_CPs(
   window_size = 100,
   search_point_START = 50,
   search_point_END = NA,
-  cutEnd = 200,
-  adjust_distal_polyA_end = FALSE,
-  long_coverage_threshold = 3,
+  cutEnd = 0,
+  adjust_distal_polyA_end = TRUE,
+  long_coverage_threshold = 2,
   PolyA_PWM = NA,
   classifier = NA,
-  classifier_cutoff = 0.5,
+  classifier_cutoff = 0.8,
   shift_range = 50,
   step = 1,
   two_way = FALSE,
   outdir = getInPASOutputDirectory(),
   silence = FALSE,
-  future.chunk.size = 50
+  cluster_type = c("interactive", "multicore", "torque", "slurm", "sge", "lsf",
+    "openlava", "socket"),
+  template_file = NULL,
+  mc.cores = 1,
+  future.chunk.size = 50,
+  resources = list(walltime = 3600 * 8, num.cpu = 4, mpp = 1024 * 4, queue = "long")
 )
 }
 \arguments{
-\item{seqname}{A character(1) vector, specifying a chromosome/scaffold name}
+\item{seqname}{A character(1) vector, specifying a chromososome/scaffold name}
 
 \item{sqlite_db}{A path to the SQLite database for InPAS, i.e. the output of
 \code{\link[=setup_sqlitedb]{setup_sqlitedb()}}.}
@@ -52,8 +57,8 @@ extremity of 3' UTRs for searching for proximal CP sites}
 
 \item{cutEnd}{An integer(1) vector a numeric(1) vector. What percentage or
 how many nucleotides should be removed from 5' extremities before searching
-for CP sites? It can be a decimal between 0, and 1, or an integer greater
-than 1. 0.1 means 10 percent, 25 means cut first 25 bases}
+for proximal CP sites? It can be a decimal between 0, and 1, or an integer
+greater than 1. 0.1 means 10 percent, 25 means cut first 25 bases}
 
 \item{adjust_distal_polyA_end}{A logical(1) vector. If true, distal CP sites
 are subject to adjustment by the Naive Bayes classifier from the
@@ -87,31 +92,41 @@ cleanUpdTSeq package. Default 1. It can be in the range of 1 to 10.}
 searched from both directions or not.}
 
 \item{outdir}{A character(1) vector, a path with write permission for storing
-InPAS analysis results. If it doesn't exist, it will be created.}
+the CP sites. If it doesn't exist, it will be created.}
 
 \item{silence}{A logical(1), indicating whether progress is reported or not.
-By default, FALSE.}
+By default, FALSE}
+
+\item{cluster_type}{A character (1) vector, indicating the type of cluster
+job management systems. Options are "interactive","multicore", "torque",
+"slurm", "sge", "lsf", "openlava", and "socket". see
+\href{https://mllg.github.io/batchtools/articles/batchtools.html}{batchtools vignette}}
+
+\item{template_file}{A charcter(1) vector, indicating the template file for
+job submitting scripts when cluster_type is set to "torque", "slurm",
+"sge", "lsf", or "openlava".}
+
+\item{mc.cores}{An integer(1), number of cores for making multicore clusters
+or socket clusters using \pkg{batchtools}, and for \code{\link[parallel:mcdummies]{parallel::mclapply()}}}
 
 \item{future.chunk.size}{The average number of elements per future
 ("chunk"). If Inf, then all elements are processed in a single future.
 If NULL, then argument future.scheduling = 1 is used by default. Users can
 set future.chunk.size = total number of elements/number of cores set for
-the backend. See the documentation of the future_mapply function in the
-future.apply package for details.}
+the backend. See the future.apply package for details. Default, 50. This
+parameter is used to split the candidate 3' UTRs for alternative SP sites
+search.}
+
+\item{resources}{A named list specifying the computing resources when
+cluster_type is set to "torque", "slurm", "sge", "lsf", or "openlava". See
+\href{https://mllg.github.io/batchtools/articles/batchtools.html}{batchtools vignette}}
 }
 \value{
 An object of \link[GenomicRanges:GRanges-class]{GenomicRanges::GRanges} containing distal and
 proximal CP site information for each 3' UTR
 }
 \description{
-Estimate the CP sites for UTRs on a given chromosome. This is a heavy-lifting
-function. You'd better to use a high performance computer cluster to run an
-analysis with this function. Depending on the type of the HPC cluster
-job management systems, such as  "torque", "slurm", "sge", "lsf", "openlava",
-"local", or "custom",users can set up the computing resources by referring
-to the \href{https://cran.r-project.org/web/packages/future.batchtools/future.batchtools.pdf}{manual}
-and \href{https://cran.r-project.org/web/packages/future.batchtools/vignettes/future.batchtools.html}{vignette}
-of the future.batchtools package.
+Estimate the CP sites for UTRs on a given chromosome
 }
 \examples{
 if (interactive()) {
@@ -152,7 +167,6 @@ if (interactive()) {
                                      seqname = "chr6",
                                      background = "10K",
                                      TxDb = TxDb,
-                                     chr2exclude = "chrM",
                                      hugeData = TRUE,
                                      outdir = outdir,
                                      minZ = 2,

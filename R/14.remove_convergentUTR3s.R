@@ -26,7 +26,7 @@ remove_convergentUTR3s <- function(x) {
       pval <- try(t.test(y[1:(id - 2)], y[-(1:(id + 2))])$p.value,
         silent = TRUE
       )
-      if (is.numeric(pval) && length(pval) == 1 && !is.na(pval)) {
+      if (!is.na(pval) && is.numeric(pval) && length(pval) == 1 ) {
         if (pval < 0.001) {
           x <- x[1:((id - 1) * ws)]
         }

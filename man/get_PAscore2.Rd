@@ -12,8 +12,7 @@ get_PAscore2(
   idx.gp,
   genome,
   classifier,
-  classifier_cutoff,
-  future.chunk.size = NULL
+  classifier_cutoff
 )
 }
 \arguments{
@@ -35,12 +34,6 @@ in the cleanUpdTSeq package.}
 \item{classifier_cutoff}{A numeric(1) vector. A cutoff of probability that a
 site is classified as true CP sites. The value should be between 0.5 and 1.
 Default, 0.8.}
-
-\item{future.chunk.size}{The average number of elements per future
-("chunk"). If Inf, then all elements are processed in a single future.
-If NULL, then argument future.scheduling = 1 is used by default. Users can
-set future.chunk.size = total number of elements/number of cores set for
-the backend. See the future.apply package for details.}
 }
 \value{
 a data frame
@@ -52,6 +45,6 @@ calculate CP score by cleanUpdTSeq
 \code{\link[=get_PAscore]{get_PAscore()}}
 }
 \author{
-Jianhong Ou
+Jianhong Ou, Haibo Liu
 }
 \keyword{internal}

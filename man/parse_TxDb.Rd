@@ -5,7 +5,7 @@
 \title{Extract gene models from a TxDb object}
 \usage{
 parse_TxDb(
-  sqlite_db,
+  sqlite_db = NULL,
   TxDb = getInPASTxDb(),
   edb = getInPASEnsDb(),
   genome = getInPASGenome(),
@@ -15,7 +15,7 @@ parse_TxDb(
 }
 \arguments{
 \item{sqlite_db}{A path to the SQLite database for InPAS, i.e. the output of
-\code{\link[=setup_sqlitedb]{setup_sqlitedb()}}.}
+\code{\link[=setup_sqlitedb]{setup_sqlitedb()}}. It can be \code{NULL}.}
 
 \item{TxDb}{An object of \link[GenomicFeatures:TxDb-class]{GenomicFeatures::TxDb}}
 

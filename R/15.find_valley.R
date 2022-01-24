@@ -7,16 +7,16 @@
 #' @param x  a numeric(n) vector containing MSEs for a given range.
 #' @param ss position to start searching positions of local minimal MSE
 #' @param se position to end searching positions of local minimal MSE
-#' @param n  the length of output. If n=-1, output all the local minimal MSE
-#'   positions.
-#' @param savedID saved positions of local minimal MSE
-#' @param filterByPval A logical(1) vector, indicating whether tp filter the
+#' @param n An integer, specifying the number of location where MSE are local 
+#' minima (candidate CP sites). If set to -1, return all candidate CP sites.
+#' @param savedID locations of the annotated proximal CP sites
+#' @param filterByPval A logical(1) vector, indicating whether to filter the
 #'   candidate positions by significant levels (p values) or not.
 #'
 #' @return a numeric vector containing a number of candidate CP sites.
 #' @keywords internal
 #' @importFrom stats quantile
-#' @author Jianhong Ou
+#' @author Jianhong Ou, Haibo Liu
 
 find_valley <- function(x, 
                         ss, 
@@ -42,7 +42,8 @@ find_valley <- function(x,
     pos.pos[w - 1] + space,
     pos,
     SIMPLIFY = FALSE)
-
+    
+    ## what's the rationale?
     mu <- sapply(y, mean, na.rm = TRUE)
     sigma <- sapply(y, sd, na.rm = TRUE)
     z <- (x[pos] - mu) / sigma

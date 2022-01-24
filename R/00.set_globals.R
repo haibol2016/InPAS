@@ -11,8 +11,7 @@ InPASDefaults <- list(InPAS.logging = TRUE,
                       InPAS.sqliteDb = NULL,
                       InPAS.lockname = NULL,
                       InPAS.chr2exclude = c("chrM", "MT", 
-                                            "chrPltd", "Pltd"),
-                      InPAS.verbose = TRUE)
+                                            "chrPltd", "Pltd"))
 
 #' A function called upon a package is attached to the search path
 #'
@@ -254,6 +253,7 @@ getInPASOutputDirectory <- function()
         dir.create(outdir, recursive = TRUE)
     }
     outdir <- normalizePath(outdir)
+    outdir
 }
 
 #' Set up global variables for an InPAS analysis

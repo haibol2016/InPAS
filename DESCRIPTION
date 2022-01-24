@@ -20,16 +20,16 @@ Description: Alternative polyadenylation (APA) is one of the important post-
 biocViews: Alternative Polyadenylation, Differential Polyadenylation Site Usage, 
            RNA-seq, Gene Regulation, Transcription
 License: GPL (>= 2)
-Imports: AnnotationDbi, Biostrings, BSgenome, cleanUpdTSeq, depmixS4, dplyr, 
-         flock, future.apply, GenomeInfoDb, GenomicFeatures, ggplot2, IRanges,
-         limma, magrittr, plyranges, preprocessCore, readr, reshape2, RSQLite,
-         stats, utils
-Depends: R (>= 3.1), methods, Biobase, GenomicRanges, S4Vectors
-Suggests: BiocGenerics, BiocManager,BiocStyle, BSgenome.Mmusculus.UCSC.mm10,
+Imports: AnnotationDbi,batchtools,Biobase,Biostrings,BSgenome,cleanUpdTSeq,
+         depmixS4,dplyr,flock,future,future.apply,GenomeInfoDb,GenomicRanges,
+         GenomicFeatures, ggplot2, IRanges, limma, magrittr,methods,parallelly, 
+         plyranges, preprocessCore, readr,reshape2, RSQLite, stats,S4Vectors, 
+         utils
+Depends: R (>= 3.1)
+Suggests: BiocGenerics,BiocManager, BiocStyle, BSgenome.Mmusculus.UCSC.mm10,
           BSgenome.Hsapiens.UCSC.hg19, EnsDb.Hsapiens.v86, EnsDb.Mmusculus.v79,
-          future,knitr, future.batchtools, markdown, rmarkdown, rtracklayer, 
-          RUnit, TxDb.Hsapiens.UCSC.hg19.knownGene, 
-          TxDb.Mmusculus.UCSC.mm10.knownGene
+          knitr, markdown, rmarkdown, rtracklayer, RUnit, 
+          TxDb.Hsapiens.UCSC.hg19.knownGene,TxDb.Mmusculus.UCSC.mm10.knownGene
 VignetteBuilder: knitr
 RoxygenNote: 7.1.2
 Roxygen: list(markdown = TRUE)

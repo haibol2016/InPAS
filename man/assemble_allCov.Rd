@@ -8,8 +8,7 @@ assemble_allCov(
   sqlite_db,
   seqname,
   outdir = getInPASOutputDirectory(),
-  genome = getInPASGenome(),
-  chr2exclude = getChr2Exclude()
+  genome = getInPASGenome()
 )
 }
 \arguments{
@@ -22,10 +21,6 @@ the output of setup_sqlitedb()}
 InPAS analysis results. If it doesn't exist, it will be created.}
 
 \item{genome}{An object of \link[BSgenome:BSgenome-class]{BSgenome::BSgenome}}
-
-\item{chr2exclude}{A character vector, NA or NULL, specifying chromosomes or
-scaffolds to be excluded for InPAS analysis. \code{chrM} and alternative scaffolds
-representing different haplotypes should be excluded.}
 }
 \value{
 A list of paths to per-chromosome coverage files of all samples.
@@ -73,8 +68,7 @@ if (interactive()) {
    chr_coverage <- assemble_allCov(sqlite_db,
                                    seqname = "chr6",
                                    outdir = outdir, 
-                                   genome = genome, 
-                                   chr2exclude = "chrM")
+                                   genome = genome)
 }
 }
 \author{

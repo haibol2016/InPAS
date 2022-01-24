@@ -217,9 +217,9 @@ get_ssRleCov <- function(bedgraph,
     cvg <- future_lapply(seqnames, summaryFunction, 
                          future.stdout = NA,
                          future.chunk.size = future.chunk.size)
+    
     depth <- sum(sapply(cvg, function(.cov){
-             .cov[[3]]
-         }))
+             .cov[[3]]}))
     coverage_file <- sapply(cvg, function(.cov){
         .cov[[2]]
     })

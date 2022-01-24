@@ -35,7 +35,7 @@ assign_feature <- function(gr, feature_alt = "utr3") {
 #' annotation can be very cumbersome.
 #' 
 #' @param sqlite_db A path to the SQLite database for InPAS, i.e. the output of
-#'   [setup_sqlitedb()].
+#'   [setup_sqlitedb()]. It can be `NULL`.
 #' @param TxDb An object of [GenomicFeatures::TxDb-class]
 #' @param edb An object of [ensembldb::EnsDb-class]
 #' @param genome An object of [BSgenome::BSgenome-class]
@@ -90,15 +90,17 @@ assign_feature <- function(gr, feature_alt = "utr3") {
 #' parsed_Txdb <- parse_TxDb(sqlite_db, TxDb, edb, genome,
 #'                           chr2exclude = chr2exclude)
 
-parse_TxDb <- function(sqlite_db,
+parse_TxDb <- function(sqlite_db = NULL,
                        TxDb = getInPASTxDb(), 
                        edb = getInPASEnsDb(),
                        genome = getInPASGenome(),
                        chr2exclude = getChr2Exclude(),
                        outdir = getInPASOutputDirectory()) {
-  if (missing(sqlite_db) || length(sqlite_db) != 1 ||
-      !file.exists(sqlite_db)) {
-    stop("sqlite_db, a path to the SQLite database is required!")
+  if (!is.null(sqlite_db))
+  {
+    if(length(sqlite_db) != 1 || !file.exists(sqlite_db)) {
+      stop("sqlite_db, a path to the SQLite database is required!")
+    }
   }
   
   if (!is(TxDb, "TxDb")) {
@@ -118,7 +120,7 @@ parse_TxDb <- function(sqlite_db,
   }
   if(!is.character(outdir) || length(outdir) != 1){
     stop("A path with write permission for storing \n",
-         "the SQLite database is required!")
+         "the parsed transcriptome is required!")
   }
   if (!dir.exists(outdir)){
     dir.create(outdir, recursive = TRUE)
@@ -261,21 +263,22 @@ parse_TxDb <- function(sqlite_db,
   tx <- tx %>% plyranges::as_granges()
   tx_file <-file.path(outdir, "00.parsed.TxDb.RDS")
   saveRDS(tx, file = tx_file)
-  filename_df <- data.frame(type = "transcripts", anno_file = tx_file)
-  db_conn <- dbConnect(drv = RSQLite::SQLite(), dbname = sqlite_db)
   
-  ## remove existing record for the same "tag"
-  res <- dbSendStatement(db_conn,
-                         paste0("DELETE FROM genome_anno ",
-                         "WHERE type = 'transcripts';"))
-  dbClearResult(res)
-  
-  res <- dbSendStatement(db_conn, 
-                         "INSERT INTO 
+  if (!is.null(sqlite_db))
+  {
+    filename_df <- data.frame(type = "transcripts", anno_file = tx_file)
+    db_conn <- dbConnect(drv = RSQLite::SQLite(), dbname = sqlite_db)
+    res <- dbSendStatement(db_conn,
+                           paste0("DELETE FROM genome_anno ",
+                                  "WHERE type = 'transcripts';"))
+    dbClearResult(res)
+    res <- dbSendStatement(db_conn, 
+                           "INSERT INTO 
                           genome_anno (type, anno_file) 
                           VALUES (:type, :anno_file);", 
-                          filename_df)
-  dbClearResult(res)
-  dbDisconnect(db_conn)
+                           filename_df)
+    dbClearResult(res)
+    dbDisconnect(db_conn)
+  }
   tx
 }

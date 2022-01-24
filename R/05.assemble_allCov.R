@@ -10,10 +10,6 @@
 #' @param outdir A character(1) vector, a path with write permission for storing 
 #'   InPAS analysis results. If it doesn't exist, it will be created.
 #' @param genome An object of [BSgenome::BSgenome-class]
-#' @param chr2exclude A character vector, NA or NULL, specifying chromosomes or 
-#'   scaffolds to be excluded for InPAS analysis. `chrM` and alternative scaffolds
-#'   representing different haplotypes should be excluded.
-#'   
 #' @return A list of paths to per-chromosome coverage files of all samples.
 #' \itemize{\item seqname, chromosome/scaffold name
 #'             \itemize{
@@ -56,25 +52,19 @@
 #'    chr_coverage <- assemble_allCov(sqlite_db,
 #'                                    seqname = "chr6",
 #'                                    outdir = outdir, 
-#'                                    genome = genome, 
-#'                                    chr2exclude = "chrM")
+#'                                    genome = genome)
 #' }
 
 assemble_allCov <- function(sqlite_db,
                             seqname,
                             outdir = getInPASOutputDirectory(),
-                            genome = getInPASGenome(), 
-                            chr2exclude = getChr2Exclude()){
+                            genome = getInPASGenome()){
     if (!is(genome, "BSgenome")) {
         stop("genome must be an object of BSgenome.")
     }
     if (missing(sqlite_db) || !file.exists(sqlite_db) || 
         length(sqlite_db) != 1){
         stop("The sqlite_db length is not 1 or it doesn't exist!")
-    }
-    if (!is.null(chr2exclude) && !is.character(chr2exclude))
-    {
-        stop("chr2Exclude must be NULL or a character vector")
     }
     lock_filename <- getLockName()
     if (!file.exists(lock_filename)) 
@@ -105,7 +95,7 @@ assemble_allCov <- function(sqlite_db,
     }
     outdir <- normalizePath(outdir, mustWork = TRUE)
 
-    seqLen <- get_seqLen(genome, chr2exclude)
+    seqLen <- get_seqLen(genome)
     
     chr_cov <- list()
     for (tag in unique(res$tag)){
@@ -141,6 +131,6 @@ assemble_allCov <- function(sqlite_db,
         print(paste(conditionMessage(e)))
     },
     finally = {dbDisconnect(db_conn)
-        unlock(file_lock)})
+               unlock(file_lock)})
     chr_cov
 }

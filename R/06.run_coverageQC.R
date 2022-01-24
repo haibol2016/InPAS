@@ -35,6 +35,11 @@
 #'   not NULL, only the exons overlapping the given ranges are used. For fast
 #'   data quality control, set which to Granges for one or a few large 
 #'   chromosomes.
+#' @param future.chunk.size The average number of elements per future 
+#'   ("chunk"). If Inf, then all elements are processed in a single future.
+#'   If NULL, then argument future.scheduling = 1 is used by default. Users can
+#'   set future.chunk.size = total number of elements/number of cores set for 
+#'   the backend. See the future.apply package for details.
 #' @param ... Not used yet
 #'
 #' @return A data frame as described below.
@@ -50,6 +55,7 @@
 #'   \item{rownames}{the names of coverage}
 #' } 
 #' @import GenomicRanges
+#' @importFrom future.apply future_mapply
 #'
 #' @export
 #' @author Jianhong Ou, Haibo Liu
@@ -96,8 +102,7 @@
 #'    chr_coverage <- assemble_allCov(sqlite_db, 
 #'                                    seqname = "chr6",
 #'                                    outdir, 
-#'                                    genome, 
-#'                                    chr2exclude = "chrM")
+#'                                    genome)
 #'    run_coverageQC(sqlite_db, TxDb, edb, genome,
 #'                   chr2exclude = "chrM",
 #'                   which = GRanges("chr6",
@@ -112,7 +117,9 @@ run_coverageQC <- function(sqlite_db,
                            cutoff_expdGene_cvgRate = 0.1,
                            cutoff_expdGene_sampleRate = 0.5,
                            chr2exclude = getChr2Exclude(),
-                           which = NULL, ...) {
+                           which = NULL, 
+                           future.chunk.size = 1,
+                           ...) {
   stopifnot(is(TxDb, "TxDb"))
   stopifnot(is(edb, "EnsDb"))
   stopifnot(is(genome, "BSgenome"))
@@ -206,7 +213,9 @@ run_coverageQC <- function(sqlite_db,
       viewApply(vw, function(.ele) {
         sum(unlist(.ele > cutoff_readsNum))
       })
-    }, cov[seqnames], feature[seqnames], SIMPLIFY = FALSE)
+    }, cov[seqnames], feature[seqnames], 
+    SIMPLIFY = FALSE,
+    future.chunk.size = future.chunk.size)
     stopifnot(identical(
       sapply(cvg.base, length),
       sapply(feature, length)))

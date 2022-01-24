@@ -14,6 +14,7 @@ run_coverageQC(
   cutoff_expdGene_sampleRate = 0.5,
   chr2exclude = getChr2Exclude(),
   which = NULL,
+  future.chunk.size = 1,
   ...
 )
 }
@@ -56,6 +57,12 @@ representing different haplotypes should be excluded.}
 not NULL, only the exons overlapping the given ranges are used. For fast
 data quality control, set which to Granges for one or a few large
 chromosomes.}
+
+\item{future.chunk.size}{The average number of elements per future
+("chunk"). If Inf, then all elements are processed in a single future.
+If NULL, then argument future.scheduling = 1 is used by default. Users can
+set future.chunk.size = total number of elements/number of cores set for
+the backend. See the future.apply package for details.}
 
 \item{...}{Not used yet}
 }
@@ -121,8 +128,7 @@ if (interactive()) {
    chr_coverage <- assemble_allCov(sqlite_db, 
                                    seqname = "chr6",
                                    outdir, 
-                                   genome, 
-                                   chr2exclude = "chrM")
+                                   genome)
    run_coverageQC(sqlite_db, TxDb, edb, genome,
                   chr2exclude = "chrM",
                   which = GRanges("chr6",

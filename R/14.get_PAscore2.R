@@ -13,17 +13,14 @@
 #' @param classifier_cutoff A numeric(1) vector. A cutoff of probability that a
 #'   site is classified as true CP sites. The value should be between 0.5 and 1.
 #'   Default, 0.8.
-#' @param future.chunk.size The average number of elements per future 
-#'   ("chunk"). If Inf, then all elements are processed in a single future.
-#'   If NULL, then argument future.scheduling = 1 is used by default. Users can
-#'   set future.chunk.size = total number of elements/number of cores set for 
-#'   the backend. See the future.apply package for details.
 #' @return a data frame
 #' @seealso [get_PAscore()]
 #' @importFrom cleanUpdTSeq buildFeatureVector predictTestSet
+#' @importFrom future plan multicore multisession
+#' @importFrom future.apply future_lapply
 #' @import GenomicRanges
 #' @keywords internal
-#' @author Jianhong Ou
+#' @author Jianhong Ou, Haibo Liu
 
 get_PAscore2 <- function(seqname,
                      pos, 
@@ -32,8 +29,7 @@ get_PAscore2 <- function(seqname,
                      idx.gp,
                      genome, 
                      classifier, 
-                     classifier_cutoff,
-                     future.chunk.size = NULL){
+                     classifier_cutoff){
   if (length(pos) < 1) {
     return(NULL)
   }
@@ -71,8 +67,14 @@ get_PAscore2 <- function(seqname,
   }
   gr_lists <- split(gr.s,  ceiling(seq_along(gr.s) / 100))
   
-  scores <- future_lapply(gr_lists, nbc_scoring, 
-                          future.chunk.size = future.chunk.size)
+  if (.Platform$OS.type == "window")
+  {
+      plan(multisession)
+  } else {
+      plan(multicore)
+  }
+  
+  scores <- future_lapply(gr_lists, nbc_scoring)
   pred.prob.test <- do.call(rbind, scores)
   
   pred.prob.test <- pred.prob.test[match(names(gr.s), 

@@ -1,6 +1,6 @@
-#' adjust distal CP sites by cleanUpdTSeq
+#' Adjust distal CP sites by cleanUpdTSeq
 #'
-#' adjust distal CP sites by cleanUpdTSeq
+#' Adjust distal CP sites by cleanUpdTSeq
 #'
 #' @param distalCPs the output of [search_distalCPs()]
 #' @param classifier An R object for Naive Bayes classifier model, like the one
@@ -30,15 +30,21 @@ adjust_distalCPs <- function(distalCPs,
   next.exon.gap <- distalCPs$next.exon.gap
   generate_gapCov <- function(gap, cp, ID, strand) {
     if (cp > 0) {
+      ## base coordinates of refined gap
       coor <- as.integer(gsub("^.*_SEP_", "", names(gap[1:cp])))
+      ## adjusting start from the end of gap
       start <- coor[length(coor)]
+      ## adjust ending
       end <- ifelse(length(coor) > 2 * shift_range,
                     coor[length(coor) - 2 * shift_range],
-                    coor[1]
-      )
+                    coor[1])
       pos <- seq(start, end, by = ifelse(strand == "+",
                                          -1 * step, 1 * step))
       idx <- match(pos, coor)
+      
+      # pos: relative position of search start to end
+      # idx: absolute coordinates for pos
+      # ID: next.exon.gap unique id (from 1 to Nth)
       cbind(pos, idx, ID)
     } else {
       NULL
@@ -49,7 +55,7 @@ adjust_distalCPs <- function(distalCPs,
                     dCPs$distalCP, 1:length(next.exon.gap), 
                     dCPs$strand, SIMPLIFY = FALSE)
   gap.cov <- do.call(rbind, gap.cov)
-  if (nrow(gap.cov) > 0) {
+  if (length(gap.cov) > 0) {
     idx <- get_PAscore2(dCPs$seqnames[gap.cov[, "ID"]],
                         gap.cov[, "pos"],
                         dCPs$strand[gap.cov[, "ID"]],
@@ -57,6 +63,7 @@ adjust_distalCPs <- function(distalCPs,
                         gap.cov[, "ID"],
                         genome, classifier,
                         classifier_cutoff)
+    ## add adjusted distal CP sites to dCPs dataframe
     distalCPs$dCPs[idx$idx.gp, "distalCP"] <- idx$idx
   }
   distalCPs

@@ -173,8 +173,7 @@ coverage[[tags[i]]] <- get_ssRleCov(bedgraph = bedgraphs[i],
 coverage <- assemble_allCov(sqlite_db,
                             seqname = "chr6",
                             outdir, 
-                            genome = getInPASGenome(), 
-                            chr2exclude = getChr2Exclude())
+                            genome = getInPASGenome())
 ```
 
 At this point, users can check the data quality in terms of coverage for all and expressed genes and 3' UTRs using `run_coverageQC`. This function output summarized coverage metrics: gene.coverage.rate, expressed.gene.coverage.rate, UTR3.coverage.rate, and UTR3.expressed.gene.subset.coverage.rate. The coverage rate of quality data should be greater than 0.75 for 3' UTRs of expressed genes.
@@ -213,7 +212,6 @@ prepared_data <- setup_CPsSearch(sqlite_db,
                                  seqname = "chr6",
                                  background = "10K",
                                  TxDb = getInPASTxDb(),
-                                 chr2exclude = "chrM",
                                  hugeData = TRUE,
                                  outdir = outdir,
                                  silence = TRUE,
@@ -235,7 +233,6 @@ CPsites <- search_CPs(seqname = "chr6",
                        classifier_cutoff = 0.8,
                        shift_range = 50,
                        step = 5,
-                       two_way = FALSE,
                        outdir = outdir, 
                        silence = TRUE)
 ```

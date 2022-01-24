@@ -11,7 +11,6 @@ setup_CPsSearch(
   seqname,
   background = c("same_as_long_coverage_threshold", "1K", "5K", "10K", "50K"),
   TxDb = getInPASTxDb(),
-  chr2exclude = getChr2Exclude(),
   hugeData = TRUE,
   outdir = getInPASOutputDirectory(),
   silence = FALSE,
@@ -38,10 +37,6 @@ threshold of local background. It can be "same_as_long_coverage_threshold",
 
 \item{TxDb}{an object of \link[GenomicFeatures:TxDb-class]{GenomicFeatures::TxDb}}
 
-\item{chr2exclude}{A character vector, NA or NULL, specifying chromosomes or
-scaffolds to be excluded for InPAS analysis. \code{chrM} and alternative scaffolds
-representing different haplotypes should be excluded.}
-
 \item{hugeData}{A logical(1) vector, indicating whether it is huge data}
 
 \item{outdir}{A character(1) vector, a path with write permission for storing
@@ -65,7 +60,7 @@ threshold of coverage for first 100 nucleotides. If the coverage of first
 not considered for further analysis. Default, 5.}
 }
 \value{
-A list as described below:
+A file storing a list as described below:
 \describe{\item{background}{The type of methods for background
 coverage calculation}
 \item{z2s}{Z-score cutoff thresholds for each 3' UTRs}
@@ -115,7 +110,6 @@ prepare data for predicting cleavage and polyadenylation (CP) sites
                                           seqname = "chr6",
                                           background = "10K",
                                           TxDb = TxDb,
-                                          chr2exclude = "chrM",
                                           hugeData = TRUE,
                                           outdir = outdir)
  }

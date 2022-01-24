@@ -67,7 +67,6 @@ prepare coverage data and fitting data for plot
                                      seqname = "chr6",
                                      background = "10K",
                                      TxDb = TxDb,
-                                     chr2exclude = "chrM",
                                      hugeData = TRUE,
                                      outdir = outdir)
                                      

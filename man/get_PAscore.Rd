@@ -4,17 +4,7 @@
 \alias{get_PAscore}
 \title{calculate the CP score}
 \usage{
-get_PAscore(
-  seqname,
-  pos,
-  str,
-  idx,
-  PWM,
-  genome,
-  ups = 50,
-  dws = 50,
-  future.chunk.size = NULL
-)
+get_PAscore(seqname, pos, str, idx, PWM, genome, ups = 50, dws = 50)
 }
 \arguments{
 \item{seqname}{a character(n) vector, the chromosome/scaffold' name}
@@ -33,12 +23,6 @@ polyadenylation signal (PAS), such as AAUAAA.}
 \item{ups}{the number of upstream bases for PAS search.}
 
 \item{dws}{the number of downstream bases for PAS search.}
-
-\item{future.chunk.size}{The average number of elements per future
-("chunk"). If Inf, then all elements are processed in a single future.
-If NULL, then argument future.scheduling = 1 is used by default. Users can
-set future.chunk.size = total number of elements/number of cores set for
-the backend. See the future.apply package for details.}
 }
 \value{
 A list containing offset positions after PA score-based filtering

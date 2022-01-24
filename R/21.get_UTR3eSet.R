@@ -62,7 +62,6 @@
 #'                                      seqname = "chr6",
 #'                                      background = "10K",
 #'                                      TxDb = TxDb,
-#'                                      chr2exclude = "chrM",
 #'                                      hugeData = TRUE,
 #'                                      outdir = outdir,
 #'                                      minZ = 2,
@@ -92,7 +91,6 @@
 #'                      classifier_cutoff = 0.8,
 #'                      shift_range = 100,
 #'                      step = 5,
-#'                      two_way = FALSE,
 #'                      outdir = outdir)
 #' utr3_cds_cov <- get_regionCov(chr.utr3 = utr3[["chr6"]],
 #'                               sqlite_db,

@@ -74,7 +74,6 @@ if (interactive()) {
                                      seqname = "chr6",
                                      background = "10K",
                                      TxDb = TxDb,
-                                     chr2exclude = "chrM",
                                      hugeData = TRUE,
                                      outdir = outdir,
                                      minZ = 2,
