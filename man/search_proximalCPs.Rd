@@ -9,10 +9,10 @@ search_proximalCPs(
   curr_UTR,
   window_size,
   MINSIZE,
-  cutEnd,
+  cutEnd = 0,
   search_point_START,
-  search_point_END,
-  two_way = FALSE
+  search_point_END = NA,
+  filter.last = TRUE
 )
 }
 \arguments{
@@ -24,14 +24,23 @@ search_proximalCPs(
 
 \item{MINSIZE}{MINSIZE for short form}
 
-\item{cutEnd}{a numeric(1) between 0 and 1. The percentage of nucleotides
-should be removed from the end before search, 0.1 means 10 percent.}
+\item{cutEnd}{A numeric(1) between 0 and 1 or an integer(1) greater than 1,
+specifying the percentage of or the number of nucleotides should be removed
+from the end before search for proximal CP sites, 0.1 means 10 percent.
+It is recommended to use an integer great than 1, such as 200, 400 or 600,
+because read coverage at 3' extremities is determined by fragment size due
+to RNA fragmentation and size selection during library construction.}
 
-\item{search_point_START}{start point for searching}
+\item{search_point_START}{An integer, specifying the start position to
+calculate MSE}
 
-\item{search_point_END}{end point for searching}
+\item{search_point_END}{A numeric(1) between 0 and 1 or an integer(1) greater
+than 1, specifying the percentage of or the number of nucleotides should not
+be excluded from the end to calculate MSE.}
 
-\item{two_way}{Search the proximal site from both direction or not.}
+\item{filter.last}{A logical(1), whether to filter out the last valley, which
+is likely the 3' end of the longer 3' UTR if no novel distal CP site is
+detected and the 3' end excluded by setting cutEnd/search_point_END is small.}
 }
 \value{
 a list

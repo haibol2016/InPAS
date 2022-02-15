@@ -24,8 +24,10 @@ Get sequence lengths for chromosomes/scaffolds from a
 \examples{
 library(BSgenome.Mmusculus.UCSC.mm10)
 genome <- BSgenome.Mmusculus.UCSC.mm10
-InPAS:::get_seqLen(genome = genome, 
-                   chr2exclude = "chrM")
+InPAS:::get_seqLen(
+  genome = genome,
+  chr2exclude = "chrM"
+)
 }
 \seealso{
 \link[GenomeInfoDb:Seqinfo-class]{GenomeInfoDb::Seqinfo}

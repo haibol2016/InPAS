@@ -79,7 +79,14 @@ A list of list as described below:
 \describe{\item{background}{The type of methods for background
 coverage calculation}
 \item{z2s}{Z-score cutoff thresholds for each 3' UTRs}
-\item{depth.weight}{A named vector containing depth weight}}
+\item{depth.weight}{A named vector containing depth weight}
+\item{chr.cov.merge}{A list of matrice storing condition/sample-
+specific coverage for 3' UTR and next.exon.gap (if exist)}
+\item{conn_next_utr3}{A logical vector, indicating whether a 3'UTR
+has a convergent 3' UTR of its downstream transcript}
+\item{chr.utr3}{A GRangesList, storing extracted 3' UTR annotation
+of transcript on a given chr}
+}
 }
 \description{
 Prepare data for predicting cleavage and polyadenylation (CP) sites using

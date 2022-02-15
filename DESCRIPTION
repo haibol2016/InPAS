@@ -1,6 +1,5 @@
 Package: InPAS
-Title: A Bioconductor package for identifying novel Alternative PolyAdenylation 
-       Sites (PAS) from RNA-seq data
+Title: Identify Novel Alternative PolyAdenylation Sites (PAS) from RNA-seq data
 Version: 2.3.0
 Authors@R: c(person("Jianhong", "Ou", role = c("aut", "cre"), 
              email = "jianhong.ou@duke.edu"), 

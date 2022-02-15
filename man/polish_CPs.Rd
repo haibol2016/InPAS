@@ -11,11 +11,11 @@ polish_CPs(CPs)
 }
 \value{
 a matrix with columns: "fit_value", "Predicted_Proximal_APA",
-"Predicted_Distal_APA", "utr3start", "utr3end", "type"
+"Predicted_Distal_APA", "utr3start", "utr3end", "distalCPtype"
 }
 \description{
-remove the multiple positions of CP sites for same 3' UTRs and only keep the
-best CP sites for proximal and distal.
+remove the multiple positions of CP sites for the same 3' UTRs and only keep
+the best CP sites for proximal and distal.
 }
 \seealso{
 \code{\link[=adjust_proximalCPs]{adjust_proximalCPs()}}, \code{\link[=adjust_proximalCPsByPWM]{adjust_proximalCPsByPWM()}},

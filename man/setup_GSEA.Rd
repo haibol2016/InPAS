@@ -55,21 +55,26 @@ tags <- colnames(eset@PDUI)
 g <- factor(gsub("\\\\..*$", "", tags))
 design <- model.matrix(~ -1 + g)
 colnames(design) <- c("Brain", "UHR")
-contrast.matrix <- makeContrasts(contrasts = "Brain-UHR", 
-                                 levels = design)
-res <- test_dPDUI(eset = eset,
-                  method = "limma",
-                  normalize = "none",
-                  design = design,
-                  contrast.matrix = contrast.matrix)
+contrast.matrix <- makeContrasts(
+  contrasts = "Brain-UHR",
+  levels = design
+)
+res <- test_dPDUI(
+  eset = eset,
+  method = "limma",
+  normalize = "none",
+  design = design,
+  contrast.matrix = contrast.matrix
+)
 gp1 <- c("Brain.auto", "Brain.phiX")
 gp2 <- c("UHR.auto", "UHR.phiX")
 groupList <- list(Brain = gp1, UHR = gp2)
-setup_GSEA(res, 
-           groupList = groupList, 
-           outdir = tempdir(),
-           preranked = TRUE,
-           rankBy = "P.value")
+setup_GSEA(res,
+  groupList = groupList,
+  outdir = tempdir(),
+  preranked = TRUE,
+  rankBy = "P.value"
+)
 }
 \seealso{
 data formats for GSEA.

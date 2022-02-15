@@ -28,57 +28,74 @@ Coverage and value}
 prepare coverage data and fitting data for plot
 }
 \examples{
-   library(BSgenome.Mmusculus.UCSC.mm10)
-   library(TxDb.Mmusculus.UCSC.mm10.knownGene)
-   genome <- BSgenome.Mmusculus.UCSC.mm10
-   TxDb <- TxDb.Mmusculus.UCSC.mm10.knownGene
+library(BSgenome.Mmusculus.UCSC.mm10)
+library(TxDb.Mmusculus.UCSC.mm10.knownGene)
+genome <- BSgenome.Mmusculus.UCSC.mm10
+TxDb <- TxDb.Mmusculus.UCSC.mm10.knownGene
 
-   ## load UTR3 annotation and convert it into a GRangesList
-   data(utr3.mm10)
-   utr3 <- split(utr3.mm10, seqnames(utr3.mm10), drop = TRUE)
-   
-   bedgraphs <- system.file("extdata",c("Baf3.extract.bedgraph",
-                                        "UM15.extract.bedgraph"), 
-                           package = "InPAS")
-   tags <- c("Baf3", "UM15")
-   metadata <- data.frame(tag = tags, 
-                          condition = c("baf", "UM15"),
-                          bedgraph_file = bedgraphs)
-   outdir = tempdir()
-   write.table(metadata, file =file.path(outdir, "metadata.txt"), 
-               sep = "\t", quote = FALSE, row.names = FALSE)
-   
-   sqlite_db <- setup_sqlitedb(metadata = file.path(outdir, 
-                                                    "metadata.txt"),
-                               outdir)
-   addLockName(filename = tempfile())
-   coverage <- list()
-   for (i in seq_along(bedgraphs)){
-   coverage[[tags[i]]] <- get_ssRleCov(bedgraph = bedgraphs[i],
-                            tag = tags[i],
-                            genome = genome,
-                            sqlite_db = sqlite_db,
-                            outdir = outdir,
-                            chr2exclude = "chrM")
-   }                                      
-   data4CPsSearch <- setup_CPsSearch(sqlite_db,
-                                     genome,
-                                     chr.utr3 = utr3[["chr6"]],
-                                     seqname = "chr6",
-                                     background = "10K",
-                                     TxDb = TxDb,
-                                     hugeData = TRUE,
-                                     outdir = outdir)
-                                     
-   gr <- GRanges("chr6", IRanges(128846245, 128850081), strand = "-")
-   names(gr) <- "chr6:128846245-128850081"
-   data4plot <- get_usage4plot(gr,
-                               proximalSites = 128849148, 
-                               sqlite_db,
-                               hugeData = TRUE)
-   plot_utr3Usage(usage_data = data4plot, 
-                  vline_color = "purple", 
-                  vline_type = "dashed")
+## load UTR3 annotation and convert it into a GRangesList
+data(utr3.mm10)
+utr3 <- split(utr3.mm10, seqnames(utr3.mm10), drop = TRUE)
+
+bedgraphs <- system.file("extdata", c(
+  "Baf3.extract.bedgraph",
+  "UM15.extract.bedgraph"
+),
+package = "InPAS"
+)
+tags <- c("Baf3", "UM15")
+metadata <- data.frame(
+  tag = tags,
+  condition = c("baf", "UM15"),
+  bedgraph_file = bedgraphs
+)
+outdir <- tempdir()
+write.table(metadata,
+  file = file.path(outdir, "metadata.txt"),
+  sep = "\t", quote = FALSE, row.names = FALSE
+)
+
+sqlite_db <- setup_sqlitedb(
+  metadata = file.path(
+    outdir,
+    "metadata.txt"
+  ),
+  outdir
+)
+addLockName(filename = tempfile())
+coverage <- list()
+for (i in seq_along(bedgraphs)) {
+  coverage[[tags[i]]] <- get_ssRleCov(
+    bedgraph = bedgraphs[i],
+    tag = tags[i],
+    genome = genome,
+    sqlite_db = sqlite_db,
+    outdir = outdir,
+    chr2exclude = "chrM"
+  )
+}
+data4CPsSearch <- setup_CPsSearch(sqlite_db,
+  genome,
+  chr.utr3 = utr3[["chr6"]],
+  seqname = "chr6",
+  background = "10K",
+  TxDb = TxDb,
+  hugeData = TRUE,
+  outdir = outdir
+)
+
+gr <- GRanges("chr6", IRanges(128846245, 128850081), strand = "-")
+names(gr) <- "chr6:128846245-128850081"
+data4plot <- get_usage4plot(gr,
+  proximalSites = 128849148,
+  sqlite_db,
+  hugeData = TRUE
+)
+plot_utr3Usage(
+  usage_data = data4plot,
+  vline_color = "purple",
+  vline_type = "dashed"
+)
 }
 \author{
 Jianhong Ou, Haibo Liu

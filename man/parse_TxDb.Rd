@@ -52,32 +52,47 @@ library("BSgenome.Hsapiens.UCSC.hg19")
 library("GenomicFeatures")
 
 ## set a sqlite database
-bedgraphs <- system.file("extdata",c("Baf3.extract.bedgraph",
-                                     "UM15.extract.bedgraph"), 
-                         package = "InPAS")
+bedgraphs <- system.file("extdata", c(
+  "Baf3.extract.bedgraph",
+  "UM15.extract.bedgraph"
+),
+package = "InPAS"
+)
 tags <- c("Baf3", "UM15")
-metadata <- data.frame(tag = tags, 
-                       condition = c("Baf3", "UM15"),
-                       bedgraph_file = bedgraphs)
-outdir = tempdir()
-write.table(metadata, file =file.path(outdir, "metadata.txt"), 
-            sep = "\t", quote = FALSE, row.names = FALSE)
-sqlite_db <- setup_sqlitedb(metadata = 
-                            file.path(outdir, "metadata.txt"),
-                            outdir)
+metadata <- data.frame(
+  tag = tags,
+  condition = c("Baf3", "UM15"),
+  bedgraph_file = bedgraphs
+)
+outdir <- tempdir()
+write.table(metadata,
+  file = file.path(outdir, "metadata.txt"),
+  sep = "\t", quote = FALSE, row.names = FALSE
+)
+sqlite_db <- setup_sqlitedb(
+  metadata =
+    file.path(outdir, "metadata.txt"),
+  outdir
+)
 
 samplefile <- system.file("extdata",
-                         "hg19_knownGene_sample.sqlite",
-                          package = "GenomicFeatures")
+  "hg19_knownGene_sample.sqlite",
+  package = "GenomicFeatures"
+)
 TxDb <- loadDb(samplefile)
 edb <- EnsDb.Hsapiens.v86
 genome <- BSgenome.Hsapiens.UCSC.hg19
 seqnames <- seqnames(BSgenome.Hsapiens.UCSC.hg19)
-chr2exclude <- c("chrM", "chrMT", 
-                 seqnames[grepl("_(hap\\\\d+|fix|alt)$", 
-                          seqnames, perl = TRUE)])
+chr2exclude <- c(
+  "chrM", "chrMT",
+  seqnames[grepl("_(hap\\\\d+|fix|alt)$",
+    seqnames,
+    perl = TRUE
+  )]
+)
 parsed_Txdb <- parse_TxDb(sqlite_db, TxDb, edb, genome,
-                          chr2exclude = chr2exclude)
+  chr2exclude = chr2exclude
+)
 }
 \author{
 Haibo Liu

@@ -64,55 +64,76 @@ A file storing a list as described below:
 \describe{\item{background}{The type of methods for background
 coverage calculation}
 \item{z2s}{Z-score cutoff thresholds for each 3' UTRs}
-\item{depth.weight}{A named vector containing depth weight}}
+\item{depth.weight}{A named vector containing depth weight}
+\item{chr.cov.merge}{A matrix storing condition/sample-specific
+coverage for 3' UTR and next.exon.gap (if exist)}
+\item{conn_next_utr3}{A logical vector, indicating whether a 3'UTR
+has a convergent 3' UTR of its downstream transcript}
+\item{chr.utr3}{A GRangesList, storing extracted 3' UTR annotation
+of transcript on a given chr}
+}
 }
 \description{
 prepare data for predicting cleavage and polyadenylation (CP) sites
 }
 \examples{
- if (interactive()) {
-    library(BSgenome.Mmusculus.UCSC.mm10)
-    library("TxDb.Mmusculus.UCSC.mm10.knownGene")
-    genome <- BSgenome.Mmusculus.UCSC.mm10
-    TxDb <- TxDb.Mmusculus.UCSC.mm10.knownGene
+if (interactive()) {
+  library(BSgenome.Mmusculus.UCSC.mm10)
+  library("TxDb.Mmusculus.UCSC.mm10.knownGene")
+  genome <- BSgenome.Mmusculus.UCSC.mm10
+  TxDb <- TxDb.Mmusculus.UCSC.mm10.knownGene
 
-    ## load UTR3 annotation and convert it into a GRangesList
-    data(utr3.mm10)
-    utr3 <- split(utr3.mm10, seqnames(utr3.mm10), drop = TRUE)
+  ## load UTR3 annotation and convert it into a GRangesList
+  data(utr3.mm10)
+  utr3 <- split(utr3.mm10, seqnames(utr3.mm10), drop = TRUE)
 
-    bedgraphs <- system.file("extdata",c("Baf3.extract.bedgraph",
-                                         "UM15.extract.bedgraph"),
-                            package = "InPAS")
-    tags <- c("Baf3", "UM15")
-    metadata <- data.frame(tag = tags,
-                           condition = c("Baf3", "UM15"),
-                           bedgraph_file = bedgraphs)
-    outdir = tempdir()
-    write.table(metadata, file =file.path(outdir, "metadata.txt"),
-                sep = "\t", quote = FALSE, row.names = FALSE)
+  bedgraphs <- system.file("extdata", c(
+    "Baf3.extract.bedgraph",
+    "UM15.extract.bedgraph"
+  ),
+  package = "InPAS"
+  )
+  tags <- c("Baf3", "UM15")
+  metadata <- data.frame(
+    tag = tags,
+    condition = c("Baf3", "UM15"),
+    bedgraph_file = bedgraphs
+  )
+  outdir <- tempdir()
+  write.table(metadata,
+    file = file.path(outdir, "metadata.txt"),
+    sep = "\t", quote = FALSE, row.names = FALSE
+  )
 
-    sqlite_db <- setup_sqlitedb(metadata = file.path(outdir,
-                                                     "metadata.txt"),
-                                outdir)
-    addLockName(filename = tempfile())
-    coverage <- list()
-    for (i in seq_along(bedgraphs)){
-    coverage[[tags[i]]] <- get_ssRleCov(bedgraph = bedgraphs[i],
-                             tag = tags[i],
-                             genome = genome,
-                             sqlite_db = sqlite_db,
-                             outdir = outdir,
-                             chr2exclude = "chrM")
-    }
-    data4CPsitesSearch <- setup_CPsSearch(sqlite_db,
-                                          genome,
-                                          chr.utr3 = utr3[["chr6"]],
-                                          seqname = "chr6",
-                                          background = "10K",
-                                          TxDb = TxDb,
-                                          hugeData = TRUE,
-                                          outdir = outdir)
- }
+  sqlite_db <- setup_sqlitedb(
+    metadata = file.path(
+      outdir,
+      "metadata.txt"
+    ),
+    outdir
+  )
+  addLockName(filename = tempfile())
+  coverage <- list()
+  for (i in seq_along(bedgraphs)) {
+    coverage[[tags[i]]] <- get_ssRleCov(
+      bedgraph = bedgraphs[i],
+      tag = tags[i],
+      genome = genome,
+      sqlite_db = sqlite_db,
+      outdir = outdir,
+      chr2exclude = "chrM"
+    )
+  }
+  data4CPsitesSearch <- setup_CPsSearch(sqlite_db,
+    genome,
+    chr.utr3 = utr3[["chr6"]],
+    seqname = "chr6",
+    background = "10K",
+    TxDb = TxDb,
+    hugeData = TRUE,
+    outdir = outdir
+  )
+}
 }
 \author{
 Jianhong Ou, Haibo Liu

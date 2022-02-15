@@ -2,7 +2,7 @@
 % Please edit documentation in R/15.get_PAscore.R
 \name{get_PAscore}
 \alias{get_PAscore}
-\title{calculate the CP score}
+\title{Calculate the CP score}
 \usage{
 get_PAscore(seqname, pos, str, idx, PWM, genome, ups = 50, dws = 50)
 }
@@ -28,7 +28,8 @@ polyadenylation signal (PAS), such as AAUAAA.}
 A list containing offset positions after PA score-based filtering
 }
 \description{
-calculate the CP score by using PWM of polyadenylation signal
+Calculate the CP score by using PWM of polyadenylation signal with sequence
+around given position
 }
 \seealso{
 \code{\link[=get_PAscore2]{get_PAscore2()}}

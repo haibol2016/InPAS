@@ -7,10 +7,10 @@
 remove_convergentUTR3s(x)
 }
 \arguments{
-\item{x}{the distal 3UTR coverage}
+\item{x}{the collapsed next.exon.gap coverage}
 }
 \value{
-the 3UTR coverage after removing the next 3UTR
+the collapsed next.exon.gap after removing the next 3UTR
 }
 \description{
 some of the results is from connected two 3' UTRs. We want to remove them.
@@ -19,6 +19,6 @@ some of the results is from connected two 3' UTRs. We want to remove them.
 The algorithm need to be improved.
 }
 \author{
-Jianhong Ou
+Jianhong Ou, Haibo Liu
 }
 \keyword{internal}

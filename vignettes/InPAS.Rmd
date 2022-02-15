@@ -119,7 +119,6 @@ head(utr3_anno$chr1)
 This vignette will use the prepared 3' UTR annotation for the mouse reference genome mm10 for subsequent demonstration
 
 ```{r load_anno}
-
 ## set global variables for mouse InPAS analysis
 set_globals(genome = BSgenome.Mmusculus.UCSC.mm10,
             TxDb = TxDb.Mmusculus.UCSC.mm10.knownGene,
@@ -134,13 +133,12 @@ tx <- parse_TxDb(sqlite_db = sqlite_db,
                  genome = getInPASGenome(),
                  outdir = getInPASOutputDirectory(),
                  chr2exclude = getChr2Exclude())
-                   
 
 # load R object: utr3.mm10
 data(utr3.mm10)
 
 ## convert the GRanges into GRangesList for the 3' UTR annotation
-utr3.mm10 <- split(utr3.mm10,  seqnames(utr3.mm10), 
+utr3.mm10 <- split(utr3.mm10, seqnames(utr3.mm10), 
                    drop = TRUE)
 ```
 
@@ -198,10 +196,6 @@ plan(sequential)
 depth weight, Z-score cutoff thresholds, and  total coverage along 3' UTRs merged across biological replicates within each condition (huge data) or individual sample (non-huge data) are returned by the `setup_CPsSearch` function. Potential novel CP sites are identified for each chromosome using the `search_CPs` function. These potential CP sites can be filtered and/or adjusted using the Naive Bayes classifier provided by _cleanUpdTseq_ and/or by using the polyadenylation scores by simply matching the position-weight matrix (PWM) for the hexamer polyadenylation signal (AAUAAA and the like). 
 
 ```{r search_CPs}
-## PWM for hexamer polyadenylation signal (AAUAAA and the like) from the InPAS
-## package
-load(system.file("extdata", "polyA.rda", package = "InPAS"))
-
 ## load the Naive Bayes classifier model for classify CP sites from the 
 ## cleanUpdTseq package
 data(classifier)
@@ -226,9 +220,10 @@ CPsites <- search_CPs(seqname = "chr6",
                        search_point_START = 50,
                        search_point_END = NA,
                        cutEnd = 0,
+                       filter.last = TRUE,
                        adjust_distal_polyA_end = TRUE,
                        long_coverage_threshold = 2,
-                       PolyA_PWM = pwm, 
+                       PolyA_PWM = NA, 
                        classifier = classifier,
                        classifier_cutoff = 0.8,
                        shift_range = 50,
@@ -278,7 +273,7 @@ InPAS package also provide functions, `get_usage4plot`, `plot_utr3Usage`, and `s
 gr <- GRanges("chr6", IRanges(128846245, 128850081), strand = "-")
 names(gr) <- "128846245-128850081"
 data4plot <- get_usage4plot(gr, 
-                            proximalSites = 128849193, 
+                            proximalSites = 128849130, 
                             sqlite_db,
                             hugeData = TRUE) 
 

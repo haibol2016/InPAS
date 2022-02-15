@@ -27,6 +27,7 @@ library(BSgenome.Mmusculus.UCSC.mm10)
 genome <- BSgenome.Mmusculus.UCSC.mm10
 InPAS:::gcContents(genome, "chr1")
 }
+
 }
 \author{
 Haibo Liu

@@ -70,14 +70,18 @@ tags <- colnames(eset@PDUI)
 g <- factor(gsub("\\\\..*$", "", tags))
 design <- model.matrix(~ -1 + g)
 colnames(design) <- c("Brain", "UHR")
-contrast.matrix <- makeContrasts(contrasts = "Brain-UHR", 
-                                 levels = design)
-res <- test_dPDUI(eset = eset,
-                  sqlite_db,
-                  method = "limma",
-                  normalize = "none",
-                  design = design,
-                  contrast.matrix = contrast.matrix)
+contrast.matrix <- makeContrasts(
+  contrasts = "Brain-UHR",
+  levels = design
+)
+res <- test_dPDUI(
+  eset = eset,
+  sqlite_db,
+  method = "limma",
+  normalize = "none",
+  design = design,
+  contrast.matrix = contrast.matrix
+)
 }
 \seealso{
 \code{\link[=run_singleSampleAnalysis]{run_singleSampleAnalysis()}}, \code{\link[=run_singleGroupAnalysis]{run_singleGroupAnalysis()}},

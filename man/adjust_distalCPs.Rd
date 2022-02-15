@@ -2,7 +2,7 @@
 % Please edit documentation in R/14.adjust_distalCPs.R
 \name{adjust_distalCPs}
 \alias{adjust_distalCPs}
-\title{adjust distal CP sites by cleanUpdTSeq}
+\title{Adjust distal CP sites by the cleanUpdTSeq algorithm}
 \usage{
 adjust_distalCPs(
   distalCPs,
@@ -24,9 +24,8 @@ site is classified as true CP sites. The value should be between 0.5 and 1.
 Default, 0.8.}
 
 \item{shift_range}{An integer(1) vector, specifying a shift range for
-adjusting the proximal and distal CP sites. Default, 100. It determines the
-range flanking the candidate CP sites to search the most likely real
-CP sites.}
+adjusting the proximal and distal CP sites. Default, 50. It determines the
+range flanking the candidate CP sites to search the most likely CP sites.}
 
 \item{genome}{a \link[BSgenome:BSgenome-class]{BSgenome::BSgenome} object}
 
@@ -35,7 +34,7 @@ the proximal or distal CP sites using the Naive Bayes classifier from the
 cleanUpdTSeq package. Default 1. It can be in the range of 1 to 5.}
 }
 \description{
-adjust distal CP sites by cleanUpdTSeq
+Adjust distal CP sites by the cleanUpdTSeq algorithm
 }
 \seealso{
 \code{\link[=search_proximalCPs]{search_proximalCPs()}}, \code{\link[=get_PAscore2]{get_PAscore2()}}

@@ -2,24 +2,22 @@
 % Please edit documentation in R/15.adjust_proximalCPs.R
 \name{adjust_proximalCPs}
 \alias{adjust_proximalCPs}
-\title{adjust the proximal CP sites}
+\title{Adjust the proximal CP sites}
 \usage{
 adjust_proximalCPs(
   CPs,
-  MINSIZE,
   PolyA_PWM,
   genome,
   classifier,
   classifier_cutoff,
   shift_range,
   search_point_START,
-  step = 1
+  step = 1,
+  DIST2ANNOAPAP = 1500
 )
 }
 \arguments{
 \item{CPs}{the outputs of \code{\link[=search_proximalCPs]{search_proximalCPs()}}}
-
-\item{MINSIZE}{min size for short from}
 
 \item{PolyA_PWM}{PolyA position weight matrix}
 
@@ -33,15 +31,21 @@ adjust_proximalCPs(
 
 \item{search_point_START}{just in case there is no better CP sites}
 
-\item{step}{adjust step, default 1, means adjust by each base by
-cleanUpdTSeq.}
+\item{step}{An integer, specifying an adjusting step, default 1, means
+adjusting by each base by cleanUpdTSeq.}
+
+\item{DIST2ANNOAPAP}{An integer, specifying a cutoff for annotate MSE valleys
+with known proximal APAs in a given downstream distance. Default is 1500.}
 }
 \value{
 keep same as \code{\link[=search_proximalCPs]{search_proximalCPs()}}, which can be handled by
 \code{\link[=polish_CPs]{polish_CPs()}}.
 }
 \description{
-adjust the proximal CP sites by PolyA PWM and cleanUpdTSeq
+Adjust the proximal CP sites by PolyA PWM and cleanUpdTSeq. A few candidate
+sites, which are ranked by MSE from low to high, are used as input for
+adjusting. The final sites are the one with best score as PA sites, which are
+not necessary from the lowest MSE sites.
 }
 \seealso{
 \code{\link[=search_proximalCPs]{search_proximalCPs()}}, \code{\link[=polish_CPs]{polish_CPs()}}, \code{\link[=adjust_proximalCPsByPWM]{adjust_proximalCPsByPWM()}},

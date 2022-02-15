@@ -44,6 +44,14 @@ values, which is the output of \code{\link[=get_zScoreCutoff]{get_zScoreCutoff()
 }
 \value{
 a list
+#' \itemize{\item dCPs, a data frame converted from GRanges
+\item chr.cov.merge, depth-normalized sample/condition specific
+coverage
+\item next.exon.gap, all-in-one collapsed, refined next.exon.gap
+coverage
+\item annotated.utr3,all-in-one collapsed coverage for annotated
+proximal UTRs
+}
 }
 \description{
 search distal CP sites

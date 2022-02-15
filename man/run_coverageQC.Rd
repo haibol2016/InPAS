@@ -87,52 +87,70 @@ RNA-seq library.
 }
 \examples{
 if (interactive()) {
-   library("BSgenome.Mmusculus.UCSC.mm10")
-   library("TxDb.Mmusculus.UCSC.mm10.knownGene")
-   library("EnsDb.Mmusculus.v79")
-   
-   genome <- BSgenome.Mmusculus.UCSC.mm10
-   TxDb <- TxDb.Mmusculus.UCSC.mm10.knownGene
-   edb <- EnsDb.Mmusculus.v79
-   
-   bedgraphs <- system.file("extdata",c("Baf3.extract.bedgraph",
-                                        "UM15.extract.bedgraph"), 
-                           package = "InPAS")
-   tags <- c("Baf3", "UM15")
-   metadata <- data.frame(tag = tags, 
-                          condition = c("Baf3", "UM15"),
-                          bedgraph_file = bedgraphs)
-   outdir = tempdir()
-   write.table(metadata, file =file.path(outdir, "metadata.txt"), 
-               sep = "\t", quote = FALSE, row.names = FALSE)
-   
-   sqlite_db <- setup_sqlitedb(metadata = file.path(outdir, 
-                                                    "metadata.txt"),
-                               outdir)
-   tx <- parse_TxDb(sqlite_db = sqlite_db,
-                    TxDb = TxDb,
-                    edb = edb,
-                    genome = genome,
-                    outdir = outdir,
-                    chr2exclude = "chrM")
-   addLockName(filename = tempfile())                
-   coverage <- list()
-   for (i in seq_along(bedgraphs)){
-   coverage[[tags[i]]] <- get_ssRleCov(bedgraph = bedgraphs[i],
-                            tag = tags[i],
-                            genome = genome,
-                            sqlite_db = sqlite_db,
-                            outdir = outdir,
-                            chr2exclude = "chrM")
-   }
-   chr_coverage <- assemble_allCov(sqlite_db, 
-                                   seqname = "chr6",
-                                   outdir, 
-                                   genome)
-   run_coverageQC(sqlite_db, TxDb, edb, genome,
-                  chr2exclude = "chrM",
-                  which = GRanges("chr6",
-                  ranges = IRanges(98013000, 140678000)))
+  library("BSgenome.Mmusculus.UCSC.mm10")
+  library("TxDb.Mmusculus.UCSC.mm10.knownGene")
+  library("EnsDb.Mmusculus.v79")
+
+  genome <- BSgenome.Mmusculus.UCSC.mm10
+  TxDb <- TxDb.Mmusculus.UCSC.mm10.knownGene
+  edb <- EnsDb.Mmusculus.v79
+
+  bedgraphs <- system.file("extdata", c(
+    "Baf3.extract.bedgraph",
+    "UM15.extract.bedgraph"
+  ),
+  package = "InPAS"
+  )
+  tags <- c("Baf3", "UM15")
+  metadata <- data.frame(
+    tag = tags,
+    condition = c("Baf3", "UM15"),
+    bedgraph_file = bedgraphs
+  )
+  outdir <- tempdir()
+  write.table(metadata,
+    file = file.path(outdir, "metadata.txt"),
+    sep = "\t", quote = FALSE, row.names = FALSE
+  )
+
+  sqlite_db <- setup_sqlitedb(
+    metadata = file.path(
+      outdir,
+      "metadata.txt"
+    ),
+    outdir
+  )
+  tx <- parse_TxDb(
+    sqlite_db = sqlite_db,
+    TxDb = TxDb,
+    edb = edb,
+    genome = genome,
+    outdir = outdir,
+    chr2exclude = "chrM"
+  )
+  addLockName(filename = tempfile())
+  coverage <- list()
+  for (i in seq_along(bedgraphs)) {
+    coverage[[tags[i]]] <- get_ssRleCov(
+      bedgraph = bedgraphs[i],
+      tag = tags[i],
+      genome = genome,
+      sqlite_db = sqlite_db,
+      outdir = outdir,
+      chr2exclude = "chrM"
+    )
+  }
+  chr_coverage <- assemble_allCov(sqlite_db,
+    seqname = "chr6",
+    outdir,
+    genome
+  )
+  run_coverageQC(sqlite_db, TxDb, edb, genome,
+    chr2exclude = "chrM",
+    which = GRanges("chr6",
+      ranges = IRanges(98013000, 140678000)
+    )
+  )
 }
 }
 \author{

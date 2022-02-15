@@ -39,36 +39,50 @@ coverage of all samples
 }
 \examples{
 if (interactive()) {
-   library(BSgenome.Mmusculus.UCSC.mm10)
-   genome <- BSgenome.Mmusculus.UCSC.mm10
-   bedgraphs <- system.file("extdata",c("Baf3.extract.bedgraph",
-                                        "UM15.extract.bedgraph"), 
-                           package = "InPAS")
-   tags <- c("Baf3", "UM15")
-   metadata <- data.frame(tag = tags, 
-                          condition = c("Baf3", "UM15"),
-                          bedgraph_file = bedgraphs)
-   outdir = tempdir()
-   write.table(metadata, file =file.path(outdir, "metadata.txt"), 
-               sep = "\t", quote = FALSE, row.names = FALSE)
-   
-   sqlite_db <- setup_sqlitedb(metadata = file.path(outdir, 
-                                                    "metadata.txt"),
-                               outdir)
-   coverage <- list()
-   addLockName(filename = tempfile())
-   for (i in seq_along(bedgraphs)){
-   coverage[[tags[i]]] <- get_ssRleCov(bedgraph = bedgraphs[i],
-                            tag = tags[i],
-                            genome = genome,
-                            sqlite_db = sqlite_db,
-                            outdir = outdir,
-                            chr2exclude = "chrM")
-   }
-   chr_coverage <- assemble_allCov(sqlite_db,
-                                   seqname = "chr6",
-                                   outdir = outdir, 
-                                   genome = genome)
+  library(BSgenome.Mmusculus.UCSC.mm10)
+  genome <- BSgenome.Mmusculus.UCSC.mm10
+  bedgraphs <- system.file("extdata", c(
+    "Baf3.extract.bedgraph",
+    "UM15.extract.bedgraph"
+  ),
+  package = "InPAS"
+  )
+  tags <- c("Baf3", "UM15")
+  metadata <- data.frame(
+    tag = tags,
+    condition = c("Baf3", "UM15"),
+    bedgraph_file = bedgraphs
+  )
+  outdir <- tempdir()
+  write.table(metadata,
+    file = file.path(outdir, "metadata.txt"),
+    sep = "\t", quote = FALSE, row.names = FALSE
+  )
+
+  sqlite_db <- setup_sqlitedb(
+    metadata = file.path(
+      outdir,
+      "metadata.txt"
+    ),
+    outdir
+  )
+  coverage <- list()
+  addLockName(filename = tempfile())
+  for (i in seq_along(bedgraphs)) {
+    coverage[[tags[i]]] <- get_ssRleCov(
+      bedgraph = bedgraphs[i],
+      tag = tags[i],
+      genome = genome,
+      sqlite_db = sqlite_db,
+      outdir = outdir,
+      chr2exclude = "chrM"
+    )
+  }
+  chr_coverage <- assemble_allCov(sqlite_db,
+    seqname = "chr6",
+    outdir = outdir,
+    genome = genome
+  )
 }
 }
 \author{
