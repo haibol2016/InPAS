@@ -17,7 +17,6 @@
 #' path <- system.file("extdata", package = "InPAS")
 #' load(file.path(path, "eset.MAQC.rda"))
 #' res <- InPAS:::run_singleSampleAnalysis(eset)
-
 run_singleSampleAnalysis <- function(UTR3eset) {
   ## could we use coverage instead of counts for poisson distribution?
   phmm <- function(counts) {

@@ -24,22 +24,19 @@
 
 adjust_proximalCPsByNBC <- function(idx.list,
                                     cov_diff.list,
-                                    seqnames, 
-                                    starts, 
+                                    seqnames,
+                                    starts,
                                     strands,
-                                    genome, 
-                                    classifier, 
+                                    genome,
+                                    classifier,
                                     classifier_cutoff,
-                                    shift_range, 
-                                    search_point_START, 
+                                    shift_range,
+                                    search_point_START,
                                     step = 1) {
   idx.len <- sapply(idx.list, length)
   offsite <- 10^nchar(as.character(max(idx.len) * ceiling(shift_range / step)))
   pos.matrix <- mapply(function(idx, start, strand, cov_diff, ID) {
-    if (length(idx) == 0) {
-      return(NULL)
-    }
-    if (is.na(idx[1])) {
+    if (length(idx) == 0 || is.na(idx[1])) {
       return(NULL)
     }
     idx.gp <- 1:length(idx)
@@ -48,10 +45,10 @@ adjust_proximalCPsByNBC <- function(idx.list,
       idx_up <- idx + shift_range
       idx <- mapply(function(a, b, c) {
         unique(sort(c(seq(a, b, by = step), c)))
-      },
-      idx_lo, idx_up, idx,
+      }, idx_lo, idx_up, idx,
       SIMPLIFY = FALSE
       )
+
       idx.gp <- rep(1:length(idx_lo), sapply(idx, length))
       idx <- as.integer(unlist(idx))
       idx <- cbind(idx, idx.gp)
@@ -73,21 +70,25 @@ adjust_proximalCPsByNBC <- function(idx.list,
   )
   pos.matrix <- do.call(rbind, pos.matrix)
 
-  if (length(pos.matrix) > 0) {
-    idx <- get_PAscore2(seqnames[pos.matrix[, "ID"]],
-                        pos.matrix[, "pos"],
-                        strands[pos.matrix[, "ID"]],
-                        pos.matrix[, "idx"],
-                        pos.matrix[, "ID"] * offsite + pos.matrix[, "idx.gp"],
-                        genome, classifier, 
-                        classifier_cutoff)
-                        
-    idx$ID <- floor(idx$idx.gp / offsite)
-    idx <- idx[!duplicated(idx$ID), ]
-    IDs <- unique(pos.matrix[, "ID"])
-    idx.idx <- idx$idx[match(IDs, idx$ID)]
-    idx.idx[is.na(idx.idx)] <- sapply(idx.list[IDs[is.na(idx.idx)]], `[`, 1)
-    idx.list[IDs] <- idx.idx
+  if (is(pos.matrix, "matrix") && nrow(pos.matrix) > 0) {
+    idx <- get_PAscore2(
+      seqnames[pos.matrix[, "ID"]],
+      pos.matrix[, "pos"],
+      strands[pos.matrix[, "ID"]],
+      pos.matrix[, "idx"],
+      pos.matrix[, "ID"] * offsite + pos.matrix[, "idx.gp"],
+      genome, classifier,
+      classifier_cutoff
+    )
+    if (!is.null(idx)) {
+      idx$ID <- floor(idx$idx.gp / offsite)
+      ## only return the top one per 3' UTR
+      idx <- idx[!duplicated(idx$ID), ]
+      IDs <- unique(pos.matrix[, "ID"])
+      idx.idx <- idx$idx[match(IDs, idx$ID)]
+      idx.idx[is.na(idx.idx)] <- sapply(idx.list[IDs[is.na(idx.idx)]], `[`, 1)
+      idx.list[IDs] <- idx.idx
+    } 
   }
   idx.list
 }

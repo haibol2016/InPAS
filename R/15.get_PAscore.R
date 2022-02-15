@@ -1,6 +1,7 @@
-#' calculate the CP score
+#' Calculate the CP score
 #'
-#' calculate the CP score by using PWM of polyadenylation signal
+#' Calculate the CP score by using PWM of polyadenylation signal with sequence
+#' around given position
 #'
 #' @param seqname a character(n) vector, the chromosome/scaffold' name
 #' @param pos genomic positions
@@ -18,13 +19,13 @@
 #' @author Jianhong Ou
 
 get_PAscore <- function(seqname,
-                        pos, 
-                        str, 
-                        idx, 
-                        PWM, 
-                        genome, 
-                        ups = 50, 
-                        dws = 50){
+                        pos,
+                        str,
+                        idx,
+                        PWM,
+                        genome,
+                        ups = 50,
+                        dws = 50) {
   pos <- pos[!is.na(pos)]
   if (length(pos) < 1) {
     return(NULL)
@@ -32,14 +33,18 @@ get_PAscore <- function(seqname,
   start <- pos - ups
   start[start < 1] <- 1
   end <- pos + dws
-  gr <- GRanges(seqname, IRanges(start, end, 
-                                 names = as.character(pos)),
-                strand = str)
+  gr <- GRanges(seqname, IRanges(start, end,
+    names = as.character(pos)
+  ),
+  strand = str
+  )
   seq <- getSeq(genome, gr)
-  
-  mT  <- future_lapply(seq, matchPWM, pwm = PWM, 
-                    min.score = "70%", with.score = TRUE)
-  
+
+  mT <- future_lapply(seq, matchPWM,
+    pwm = PWM,
+    min.score = "70%", with.score = TRUE
+  )
+
   hits <- sapply(mT, function(.ele) {
     if (!is(.ele, "XStringViews")) {
       return(FALSE)

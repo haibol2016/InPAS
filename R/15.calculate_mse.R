@@ -3,9 +3,9 @@
 #' Calculate mean squared errors (MSE) for each searched site which is assumed
 #' bisection site (i.e. potential CP site).
 #'
-#' @param .ele A numeric vector, storing 3' UTR coverage for a give sample or 
+#' @param .ele A numeric vector, storing 3' UTR coverage for a give sample or
 #'   collapsed 3' UTR coverage for a given condition
-#' @param search_point_START An integer, specifying the start position to 
+#' @param search_point_START An integer, specifying the start position to
 #'   calculate MSE
 #' @param search_point_END An integer, specifying end position to calculate MSE
 #'
@@ -18,7 +18,8 @@ calculate_mse <- function(.ele,
                           search_point_START,
                           search_point_END) {
   .l <- length(.ele)
-  short_UTR_abun <- cumsum(.ele) / (1:.l) ## averaged coverage as abundance
+  ## averaged coverage as abundance
+  short_UTR_abun <- cumsum(.ele) / (1:.l)
 
   ## cumulative coverage from end to start
   long_UTR_abun <- cumsum(rev(.ele)) / (1:.l)

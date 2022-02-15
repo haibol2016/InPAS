@@ -11,7 +11,7 @@
 #'   in fit and columns containing contrasts. May be a vector if there is only
 #'   one contrast. see [limma::makeContrasts()]
 #' @param coef An integer(1) vector specifying which coefficient or a character(1)
-#'   vector specifying which contrast of the linear model is to test. see more 
+#'   vector specifying which contrast of the linear model is to test. see more
 #'   [limma::topTable()]. Default, 1.
 #' @param robust A logical(1) vector,indicating whether the estimation of the
 #'   empirical Bayes prior parameters be robustified against outlier sample
@@ -28,12 +28,12 @@
 #'
 #' @keywords internal
 
-run_limmaAnalysis <- function(UTR3eset, 
-                          design, 
-                          contrast.matrix,
-                          coef = 1, 
-                          robust = FALSE,
-                          ...) {
+run_limmaAnalysis <- function(UTR3eset,
+                              design,
+                              contrast.matrix,
+                              coef = 1,
+                              robust = FALSE,
+                              ...) {
   if (missing(design) || missing(contrast.matrix)) {
     stop("desing and contrast.matrix is required.")
   }

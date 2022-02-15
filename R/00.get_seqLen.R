@@ -1,10 +1,10 @@
 #' Get sequence lengths for chromosomes/scaffolds
 #'
-#' Get sequence lengths for chromosomes/scaffolds from a 
+#' Get sequence lengths for chromosomes/scaffolds from a
 #'   [BSgenome::BSgenome-class] object
-#' 
+#'
 #' @param genome An object of [BSgenome::BSgenome-class]
-#' @param chr2exclude A character vector, NA or NULL, specifying chromosomes or 
+#' @param chr2exclude A character vector, NA or NULL, specifying chromosomes or
 #'   scaffolds to be excluded for InPAS analysis. `chrM` and alternative scaffolds
 #'   representing different haplotypes should be excluded.
 #'
@@ -16,16 +16,16 @@
 #' @examples
 #' library(BSgenome.Mmusculus.UCSC.mm10)
 #' genome <- BSgenome.Mmusculus.UCSC.mm10
-#' InPAS:::get_seqLen(genome = genome, 
-#'                    chr2exclude = "chrM")
-
-get_seqLen <- function(genome = getInPASGenome(), 
+#' InPAS:::get_seqLen(
+#'   genome = genome,
+#'   chr2exclude = "chrM"
+#' )
+get_seqLen <- function(genome = getInPASGenome(),
                        chr2exclude = getChr2Exclude()) {
   if (!is(genome, "BSgenome")) {
     stop("genome must be an object of BSgenome class")
   }
-  if (!is.null(chr2exclude) && !is.character(chr2exclude))
-  {
+  if (!is.null(chr2exclude) && !is.character(chr2exclude)) {
     stop("chr2Exclude must be NULL or a character vector")
   }
   len <- seqlengths(genome)

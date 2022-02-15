@@ -1,5 +1,5 @@
 #' Visualize the dPDUI events using ggplot2
-#' 
+#'
 #' Visualize the dPDUI events by plotting the MSE, and total coverage per group
 #' along 3' UTR regions with dPDUI using [ggplot2::geom_line ()].
 #'
@@ -17,24 +17,30 @@
 #' @author Haibo Liu
 #' @seealso For example, see [get_usage4plot()].
 
-plot_utr3Usage <- function(usage_data, 
-                           vline_color = "purple", 
-                           vline_type = "dashed"){
-    p <- list()
-    for (gr in names(usage_data)){
-        data <- usage_data[names(usage_data) == gr, ]$dat[[1]]
-        p[[gr]] <- ggplot(data = data, aes(x = Position, y= value,
-                                     colour = Coverage)) + 
-            geom_line() +
-            geom_vline(xintercept = 
-                           usage_data[names(usage_data) == gr, ]$offset, 
-                       colour = vline_color, linetype = vline_type) + 
-            facet_grid(rows = vars(Coverage), scales = "free_y") +
-            ylab("") +
-            ggtitle(gsub("\\.", ":", gr, perl = TRUE)) +
-            theme(plot.title = element_text(hjust = 0.5), 
-                  legend.position = "none")
-        print(p[[gr]])
-    }
-    invisible(p)
+plot_utr3Usage <- function(usage_data,
+                           vline_color = "purple",
+                           vline_type = "dashed") {
+  p <- list()
+  for (gr in names(usage_data)) {
+    data <- usage_data[names(usage_data) == gr, ]$dat[[1]]
+    p[[gr]] <- ggplot(data = data, aes(
+      x = Position, y = value,
+      colour = Coverage
+    )) +
+      geom_line() +
+      geom_vline(
+        xintercept =
+          usage_data[names(usage_data) == gr, ]$offset,
+        colour = vline_color, linetype = vline_type
+      ) +
+      facet_grid(rows = vars(Coverage), scales = "free_y") +
+      ylab("") +
+      ggtitle(gsub("\\.", ":", gr, perl = TRUE)) +
+      theme(
+        plot.title = element_text(hjust = 0.5),
+        legend.position = "none"
+      )
+    print(p[[gr]])
+  }
+  invisible(p)
 }

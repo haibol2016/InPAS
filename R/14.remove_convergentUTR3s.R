@@ -4,33 +4,22 @@
 #'
 #' The algorithm need to be improved.
 #'
-#' @param x the distal 3UTR coverage
+#' @param x the collapsed next.exon.gap coverage
 #'
-#' @return the 3UTR coverage after removing the next 3UTR
+#' @return the collapsed next.exon.gap after removing the next 3UTR
 #' @keywords internal
-#' @author Jianhong Ou
+#' @author Jianhong Ou, Haibo Liu
 
 remove_convergentUTR3s <- function(x) {
-  ## smooth by window_size=10
-  ws <- 10
-  len <- length(x)
-  if (len > 100) {
-    y <- rowsum(x,
-      group = rep(1:ceiling(len / ws), each = ws)[1:len],
-      reorder = FALSE
+  if (length(x) > 100) {
+    id <- find_valleyBySpline(x,
+      ss = 1,
+      se = length(x), 
+      n = 1,
+      filter.last = FALSE
     )
-    y <- y[-length(y)]
-    id <- find_valley(y, 1, length(y), 1, filterByPval = FALSE)
-    if (length(id) > 0) {
-      if (id < 3) id <- 3
-      pval <- try(t.test(y[1:(id - 2)], y[-(1:(id + 2))])$p.value,
-        silent = TRUE
-      )
-      if (!is.na(pval) && is.numeric(pval) && length(pval) == 1 ) {
-        if (pval < 0.001) {
-          x <- x[1:((id - 1) * ws)]
-        }
-      }
+    if (!is.na(id)) {
+      x <- x[seq_len(id)]
     }
   }
   x

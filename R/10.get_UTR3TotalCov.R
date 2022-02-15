@@ -38,10 +38,10 @@ fft.smooth <- function(sn, p) {
 
 #' extract coverage of 3' UTR for CP sites prediction
 #'
-#' extract 3' UTR coverage from totalCov according to the 
+#' extract 3' UTR coverage from totalCov according to the
 #'   [GenomicRanges::GRanges-class] object utr3.
 #'
-#' @param chr.utr3 An object of [GenomicRanges::GRanges-class]. It must be an 
+#' @param chr.utr3 An object of [GenomicRanges::GRanges-class]. It must be an
 #'   element of the output of [extract_UTR3Anno()] for a given chromosome.
 #' @param chr.totalCov total coverage for each condition of a given chromosome. It
 #'   must be an output of [get_totalCov()]
@@ -51,14 +51,14 @@ fft.smooth <- function(sn, p) {
 #' @param FFT Use FFT smooth or not.
 #' @param fft.sm.power the cut-off frequency of FFT smooth.
 #'
-#' @return path to a file storing the UTR3 total coverage for a given 
+#' @return path to a file storing the UTR3 total coverage for a given
 #'   chromosome/scaffold
 #' @keywords internal
 #' @import GenomicRanges
 #' @importFrom IRanges Views viewApply IRanges viewMeans
 #' @author Jianhong Ou
 
-get_UTR3TotalCov <- function(chr.utr3, 
+get_UTR3TotalCov <- function(chr.utr3,
                              chr.totalCov,
                              gcCompensation = NA,
                              mappabilityCompensation = NA,
@@ -67,7 +67,7 @@ get_UTR3TotalCov <- function(chr.utr3,
   ## output of get_totalCov() is a list of list:
   ## chr.totalCov[[seqname]][[condition]]
   chr.totalCov <- chr.totalCov[[1]]
-  ## memory consuming if gcCompensation, and mappabilityCompensation are 
+  ## memory consuming if gcCompensation, and mappabilityCompensation are
   ## used for coverage correction
   ## memory consuming if gcComp, and mapComp are used for coverage correction
   utr3_totalCov <- function(.utr, .cvg, gcComp, mapComp) {
@@ -86,10 +86,10 @@ get_UTR3TotalCov <- function(chr.utr3,
           )
       }
     }
-    
+
     view <- lapply(.cvg, Views,
-                   start = start,
-                   end = end, names = names(.utr)
+      start = start,
+      end = end, names = names(.utr)
     )
     view <- sapply(view, function(.view) {
       viewApply(.view, as.integer)
@@ -117,10 +117,12 @@ get_UTR3TotalCov <- function(chr.utr3,
       view
     }
   }
-  
-  view <- utr3_totalCov(.utr = chr.utr3,
-                        .cvg = chr.totalCov, 
-                        gcComp = gcCompensation,
-                        mapComp = mappabilityCompensation)
+
+  view <- utr3_totalCov(
+    .utr = chr.utr3,
+    .cvg = chr.totalCov,
+    gcComp = gcCompensation,
+    mapComp = mappabilityCompensation
+  )
   view
 }

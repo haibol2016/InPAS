@@ -5,7 +5,7 @@
 #' @param gp2 tag names of group 2
 #'
 #' @return a matrix of test results
-#' 
+#'
 #' @seealso [run_singleSampleAnalysis()] for a single-sample APA
 #'   analysis,[run_singleGroupAnalysis()] for a single-group sample APA analysis,
 #'   [run_limmaAnalysis()] for limma-based APA analysis of complex experimental
@@ -14,9 +14,8 @@
 #' @author Jianhong Ou
 
 run_fisherExactTest <- function(UTR3eset,
-                                gp1, 
+                                gp1,
                                 gp2) {
-
   short <- UTR3eset$short
   long <- UTR3eset$long
 

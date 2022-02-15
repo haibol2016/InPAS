@@ -18,28 +18,31 @@
 #' @keywords internal
 #' @author Jianhong Ou
 
-adjust_proximalCPsByPWM <- function(idx, 
-                             PolyA_PWM,
-                             seqnames, 
-                             starts,
-                             strands,
-                             genome,
-                             shift_range,
-                             search_point_START) {
-  mapply(function(id, seqname, start, strand) {
+adjust_proximalCPsByPWM <- function(idx,
+                                    PolyA_PWM,
+                                    seqnames,
+                                    starts,
+                                    strands,
+                                    genome,
+                                    shift_range,
+                                    search_point_START) {
+  idx.list <- mapply(function(id, seqname, start, strand) {
     if (length(id) == 1) {
       if (is.na(id)) {
         return(NULL)
       }
     }
     if (length(id) > 0) {
-      pos <- if (strand == "+") start + id - 1 else start - id + 1
+      pos <- {
+        if (strand == "+") start + id - 1 else start - id + 1
+      }
       id <- get_PAscore(seqname, pos, strand,
-                        id,
-                        PWM = PolyA_PWM, 
-                        genome = genome,
-                        ups = shift_range + 25,
-                        dws = shift_range + 25)
+        id,
+        PWM = PolyA_PWM,
+        genome = genome,
+        ups = shift_range + 25, # why + 25?
+        dws = shift_range + 25
+      )
     }
     id
   }, idx, seqnames, starts, strands, SIMPLIFY = FALSE)

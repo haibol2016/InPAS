@@ -17,7 +17,7 @@
 #' genome <- BSgenome.Mmusculus.UCSC.mm10
 #' InPAS:::gcContents(genome, "chr1")
 #' }
-
+#'
 gcContents <- function(genome, seqname, nonATCGExclude = TRUE) {
   if (!is(genome, "BSgenome")) {
     stop("Genome must be a BSgenome object!")
@@ -44,15 +44,15 @@ gcContents <- function(genome, seqname, nonATCGExclude = TRUE) {
 #'  in the same forms of seqnames in the BSgenome
 #' @param window size of a sliding window, which optimally is set to the read
 #'   length
-#' @param future.chunk.size The average number of elements per future 
+#' @param future.chunk.size The average number of elements per future
 #'   ("chunk"). If Inf, then all elements are processed in a single future.
 #'   If NULL, then argument future.scheduling = 1 is used by default. Users can
-#'   set future.chunk.size = total number of elements/number of cores set for 
+#'   set future.chunk.size = total number of elements/number of cores set for
 #'   the backend. See the future.apply package for details.
 #' @importFrom Biostrings alphabetFrequency toString
 #'   letterFrequencyInSlidingView DNAString
 #' @return A list of numeric vectors containing the weight (scaffold-level GC\%
-#'   / GC\% per sliding window) for GC composition-based correction for each 
+#'   / GC\% per sliding window) for GC composition-based correction for each
 #'   chromosome/scaffold.
 #' @importFrom future.apply future_lapply
 #' @author Jianhong Ou, Haibo Liu
@@ -65,8 +65,8 @@ gcContents <- function(genome, seqname, nonATCGExclude = TRUE) {
 #' genome <- BSgenome.Mmusculus.UCSC.mm10
 #' InPAS:::gcComp(genome, "chr1")
 #' }
-
-gcComp <- function(genome, seqnames, window = 50, 
+#'
+gcComp <- function(genome, seqnames, window = 50,
                    future.chunk.size = NULL) {
   fref <- sapply(
     seqnames,
@@ -78,40 +78,43 @@ gcComp <- function(genome, seqnames, window = 50,
   win_size <- floor(window / 2)
 
   ## helper function
-  window_gc <- function(seqname){
+  window_gc <- function(seqname) {
     dna <- toString(genome[[seqname]])
     dna <- paste0(
       dna,
-      paste(rep("N", win_size - 1), collapse = ""))
-    window_gc <- 
+      paste(rep("N", win_size - 1), collapse = "")
+    )
+    window_gc <-
       letterFrequencyInSlidingView(DNAString(dna),
-                                   view.width = win_size,
-                                   letters = "CG",
-                                   OR = "|",
-                                   as.prob = TRUE)
-    
+        view.width = win_size,
+        letters = "CG",
+        OR = "|",
+        as.prob = TRUE
+      )
+
     ## seqname-level GC% / per-window GC%
     ## what if window_gc = 0?
     wk <- fref[seqname] / window_gc[, 1]
   }
-    fdat <- future_lapply(seqnames, window_gc,
-                          future.chunk.size = future.chunk.size,
-                          future.stdout = NA)
-    fdat
+  fdat <- future_lapply(seqnames, window_gc,
+    future.chunk.size = future.chunk.size,
+    future.stdout = NA
+  )
+  fdat
 }
 
 #' Calculate weights for mappability-base coverage correction
 #'
 #' Calculate weights for mappability-base coverage correction
-#' 
-#' @description mappability is calculated by using 
-#' \href{http://algorithms.cnag.cat/wiki/Man:gem-mappability}{GEM} 
-#'  with the following command lines: 
+#'
+#' @description mappability is calculated by using
+#' \href{http://algorithms.cnag.cat/wiki/Man:gem-mappability}{GEM}
+#'  with the following command lines:
 #' PATH=$PATH:~/bin/GEM-binaries-Linux-x86_64-core_i3-20130406-045632/bin
 #' ./gem-indexer -i genome.fa -o mm10.index.gem
 #' ./gem-mappability -I mm10.index.gem.gem -l 100 -o mm10.mappability
 #' ./gem-2-wig -I mm10.index.gem.gem -i mm10.mappability -o mm10.mappability.wig
-#' 
+#'
 #' @param mi A numeric vector of mappability along per
 #' chromosome/scaffold
 #'
@@ -121,7 +124,7 @@ gcComp <- function(genome, seqnames, window = 50,
 #' @author Jianhong Ou
 #' @references Derrien et al. Fast computation and applications of genome
 #'   mappability. PLoS One. 2012;7(1):e30377. doi: 10.1371/journal.pone.0030377.
-#' 
+#'
 
 mapComp <- function(mi) {
   max(mi) / mi
