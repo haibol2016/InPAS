@@ -4,7 +4,12 @@
 \alias{get_UTR3CDS}
 \title{Get 3' UTRs and their last CDS regions based on CP sites}
 \usage{
-get_UTR3CDS(sqlite_db, chr.utr3, outdir = getInPASOutputDirectory())
+get_UTR3CDS(
+  sqlite_db,
+  chr.utr3,
+  outdir = getInPASOutputDirectory(),
+  DIST2END = 200
+)
 }
 \arguments{
 \item{sqlite_db}{A path to the SQLite database for InPAS, i.e. the output of
@@ -16,6 +21,10 @@ GRanges for a chromosome. It must be one element of an output of
 
 \item{outdir}{A character(1) vector, a path with write permission for storing
 InPAS analysis results. If it doesn't exist, it will be created.}
+
+\item{DIST2END}{An integer(1) vector, specifying minimal length
+difference between proximal and distal APA sites which should be met to be
+considered for differential APA analysis. Default is 200 bp.}
 }
 \value{
 An object of \link[GenomicRanges:GRanges-class]{GenomicRanges::GRanges} containing GRanges for

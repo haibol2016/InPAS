@@ -4,14 +4,21 @@
 \alias{polish_CPs}
 \title{polish the searching results of CP sites}
 \usage{
-polish_CPs(CPs)
+polish_CPs(CPs, output.all, DIST2END = 200)
 }
 \arguments{
 \item{CPs}{output of \code{\link[=search_proximalCPs]{search_proximalCPs()}} or \code{\link[=adjust_proximalCPs]{adjust_proximalCPs()}}}
+
+\item{output.all}{A logical(1), indicating whether to output entries with only
+single CP site for a 3' UTR.}
+
+\item{DIST2END}{An integer(1) vector, specifying minimal length
+difference between proximal and distal APA sites which should be met to be
+considered for outputted if \emph{output.all} is set to TRUE. Default is 200 bp.}
 }
 \value{
-a matrix with columns: "fit_value", "Predicted_Proximal_APA",
-"Predicted_Distal_APA", "utr3start", "utr3end", "distalCPtype"
+a data.frame with columns: "fit_value", "Predicted_Proximal_APA",
+"Predicted_Distal_APA", "utr3start", "utr3end", "Predicted_Distal_APA_type"
 }
 \description{
 remove the multiple positions of CP sites for the same 3' UTRs and only keep

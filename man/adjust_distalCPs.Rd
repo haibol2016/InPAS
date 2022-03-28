@@ -10,6 +10,7 @@ adjust_distalCPs(
   classifier_cutoff,
   shift_range,
   genome,
+  seqname,
   step = 1
 )
 }
@@ -28,6 +29,8 @@ adjusting the proximal and distal CP sites. Default, 50. It determines the
 range flanking the candidate CP sites to search the most likely CP sites.}
 
 \item{genome}{a \link[BSgenome:BSgenome-class]{BSgenome::BSgenome} object}
+
+\item{seqname}{A character(1) vector, specifying a chromososome/scaffold name}
 
 \item{step}{An integer (1) vector, specifying the step size used for adjusting
 the proximal or distal CP sites using the Naive Bayes classifier from the

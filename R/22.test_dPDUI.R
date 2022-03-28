@@ -138,6 +138,7 @@ test_dPDUI <- function(eset,
     res <- run_singleSampleAnalysis(eset)
   }
   eset$testRes <- res
-  saveRDS(eset, file = file.path(outdir, "dPDUI.test.RDS"))
+  saveRDS(eset, file = file.path(outdir,
+                                 paste0(method, ".test.dPDUI.RDS")))
   return(eset)
 }

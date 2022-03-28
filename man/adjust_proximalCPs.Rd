@@ -13,7 +13,7 @@ adjust_proximalCPs(
   shift_range,
   search_point_START,
   step = 1,
-  DIST2ANNOAPAP = 1500
+  DIST2ANNOAPAP = 1000
 )
 }
 \arguments{

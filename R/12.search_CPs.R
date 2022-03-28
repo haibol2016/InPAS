@@ -5,8 +5,6 @@
 #' @param seqname A character(1) vector, specifying a chromososome/scaffold name
 #' @param sqlite_db A path to the SQLite database for InPAS, i.e. the output of
 #'   [setup_sqlitedb()].
-#' @param chr.utr3 An object of [GenomicRanges::GRanges-class]. An element of
-#'   the output of [extract_UTR3Anno()].
 #' @param genome A [BSgenome::BSgenome-class] object
 #' @param MINSIZE A integer(1) vector, specifying the minimal length in bp of a
 #'   short/proximal 3' UTR. Default, 10
@@ -67,8 +65,20 @@
 #' @param resources A named list specifying the computing resources when
 #'   cluster_type is set to "torque", "slurm", "sge", "lsf", or "openlava". See
 #'   \href{https://mllg.github.io/batchtools/articles/batchtools.html}{batchtools vignette}
+#' @param DIST2ANNOAPAP An integer, specifying a cutoff for annotate MSE valleys
+#'   with known proximal APAs in a given downstream distance. Default is 500.
+#' @param DIST2END An integer, specifying a cutoff of the distance between last
+#'   valley and the end of the 3' UTR (where MSE of the last base is calculated).
+#'   If the last valley is closer to the end than the specified distance, it will
+#'   not be considered because it is very likely due to RNA coverage decay at the
+#'   end of mRNA. Default is 1200. User can consider a value between 1000 and 
+#'   1500, depending on the library preparation procedures: RNA fragmentation and
+#'   size selection.
+#' @param output.all A logical(1), indicating whether to output entries with only 
+#'   single CP site for a 3' UTR. Default, FALSE.
+#' 
 #' @return An object of [GenomicRanges::GRanges-class] containing distal and
-#'   proximal CP site information for each 3' UTR
+#'   proximal CP site information for each 3' UTR if detected.
 #' @seealso [search_proximalCPs()], [adjust_proximalCPs()],
 #'   [adjust_proximalCPsByPWM()], [adjust_proximalCPsByNBC()],
 #'   [get_PAscore()], [get_PAscore2()]
@@ -157,7 +167,6 @@
 #'   CPs <- search_CPs(
 #'     seqname = "chr6",
 #'     sqlite_db = sqlite_db,
-#'     chr.utr3 = utr3[["chr6"]],
 #'     genome = genome,
 #'     MINSIZE = 10,
 #'     window_size = 100,
@@ -177,21 +186,20 @@
 #' }
 search_CPs <- function(seqname,
                        sqlite_db,
-                       chr.utr3,
                        genome = getInPASGenome(),
                        MINSIZE = 10,
                        window_size = 200,
                        search_point_START = 100,
                        search_point_END = NA,
-                       cutEnd = 200,
+                       cutEnd = NA,
                        filter.last = TRUE,
-                       adjust_distal_polyA_end = TRUE,
+                       adjust_distal_polyA_end = FALSE,
                        long_coverage_threshold = 2,
                        PolyA_PWM = NA,
                        classifier = NA,
                        classifier_cutoff = 0.8,
-                       shift_range = 50,
-                       step = 1,
+                       shift_range = 100,
+                       step = 2,
                        outdir = getInPASOutputDirectory(),
                        silence = FALSE,
                        cluster_type = c(
@@ -203,9 +211,13 @@ search_CPs <- function(seqname,
                        mc.cores = 1,
                        future.chunk.size = 50,
                        resources = list(
-                         walltime = 3600 * 8, num.cpu = 4,
-                         mpp = 1024 * 4, queue = "long"
-                       )) {
+                         walltime = 3600 * 8, ncpus = 4,
+                         mpp = 1024 * 4, queue = "long",
+                         memory = 4 * 4 * 1024
+                       ),
+                       DIST2ANNOAPAP = 500,
+                       DIST2END = 1000,
+                       output.all = FALSE) {
   if (!is.null(mc.cores) && !is.numeric(mc.cores)) {
     stop("mc.cores must be an integer(1)")
   } else if (.Platform$OS.type == "windows") {
@@ -227,19 +239,11 @@ search_CPs <- function(seqname,
     stop("PolyA_PWM and classifier can't be set at the same time for adjusting!")
   }
 
-  if (missing(genome) || missing(chr.utr3)) {
-    stop("genome and chr.utr3 are required.")
+  if (missing(genome)) {
+    stop("genome is required.")
   }
   if (!is(genome, "BSgenome")) {
     stop("genome must be an object of BSgenome.")
-  }
-  if (!is(chr.utr3, "GRanges") |
-    !all(chr.utr3$feature %in% c("utr3", "next.exon.gap", "CDS"))) {
-    stop("utr3 must be output of function of extract_UTR3Anno()")
-  }
-
-  if (seqlevelsStyle(chr.utr3) != seqlevelsStyle(genome)) {
-    stop("the seqlevelsStyle of utr3 must be same as genome")
   }
 
   if (missing(outdir)) {
@@ -273,7 +277,9 @@ search_CPs <- function(seqname,
   chr.cov <- utr3_coverage$coverage_file[utr3_coverage$chr == seqname]
 
   if (length(chr.cov) != 1) {
-    stop("The seqname is not included in the UTR3TotalCov")
+    message("The seqname is not included in the UTR3TotalCov")
+    CPsites <- GRanges()
+    return(CPsites)
   }
 
   ## load CPsSearch_data file, "seqname_data4CPsSearch.RDS", for chr = seqname
@@ -314,15 +320,17 @@ search_CPs <- function(seqname,
                           filter.last,
                           PolyA_PWM,
                           outdir,
-                          silence) {
+                          silence,
+                          DIST2ANNOAPAP,
+                          DIST2END) {
     ## Step 1: search distal CP sites
     if (!silence) {
       message(
         "chromsome ", seqname,
-        " distal search start at ", date(), ".\n"
+        " distal searching starts at ", date(), ".\n"
       )
     }
-    chr.abun <- search_distalCPs(chr.cov.merge,
+    chr.abun <- InPAS:::search_distalCPs(chr.cov.merge,
       conn_next_utr3,
       curr_UTR,
       window_size = window_size,
@@ -335,77 +343,78 @@ search_CPs <- function(seqname,
 
     if (!silence) {
       message(
-        "chromsome ", seqname, " distal search done at ",
+        "chromsome ", seqname, " distal searching done at ",
         date(), ".\n"
       )
     }
-
-    ## Step 2: adjust distal CP sites
+    ## Step 2: search proximal CP sites
     if (!silence) {
-      message(
-        "chromsome ", seqname, " distal adjust start at ",
-        date(), ".\n"
-      )
+        message(
+            "chromsome ", seqname,
+            " proximal searching starts at ", date(), ".\n"
+        )
     }
-    if (adjust_distal_polyA_end) {
-      chr.abun <- adjust_distalCPs(
-        chr.abun,
-        classifier,
-        classifier_cutoff,
-        shift_range,
-        genome, step
-      )
-    }
-    if (!silence) {
-      message(
-        "chromsome ", seqname,
-        " distal adjust done at ", date(), ".\n"
-      )
-    }
-    chr.abun <- search_proximalCPs(
+    chr.abun <- InPAS:::search_proximalCPs(
       chr.abun, curr_UTR,
       window_size, MINSIZE,
       cutEnd, search_point_START,
       search_point_END,
-      filter.last
+      filter.last,
+      DIST2END
     )
 
-    ## Step 3: search proximal CP sites
     if (!silence) {
       message(
         "chromsome ", seqname,
-        " proximal search start at ", date(), ".\n"
+        " proximal searching  done at ", date(), ".\n"
       )
     }
-
+    ## Step 3: adjust distal CP sites
+    if (!silence) {
+      message(
+        "chromsome ", seqname, " distal adjusting starts at ",
+        date(), ".\n"
+      )
+    }
+    if (adjust_distal_polyA_end) {
+      chr.abun <- InPAS:::adjust_distalCPs(
+        chr.abun,
+        classifier,
+        classifier_cutoff,
+        shift_range,
+        genome,
+        seqname,
+        step
+      )
+    }
     if (!silence) {
       message(
         "chromsome ", seqname,
-        " proximal searched  done at ", date(), ".\n"
+        " distal adjusting done at ", date(), ".\n"
       )
     }
-
     ## Step 4: adjust proximal CP sites
     if (!silence) {
       message(
         "chromsome ", seqname,
-        " proximal adjust start at ", date(), ".\n"
+        " proximal adjusting starts at ", date(), ".\n"
       )
     }
-    chr.abun <- adjust_proximalCPs(
+    chr.abun <- InPAS:::adjust_proximalCPs(
       chr.abun, PolyA_PWM,
       genome, classifier,
       classifier_cutoff,
       shift_range,
       search_point_START,
-      step
+      step,
+      DIST2ANNOAPAP
     )
     if (!silence) {
       message(
         "chromsome ", seqname,
-        " proximal adjust done at ", date(), ".\n"
+        " proximal adjusting done at ", date(), ".\n"
       )
-    }  
+    }
     chr.abun
   }
 
@@ -433,27 +442,37 @@ search_CPs <- function(seqname,
       filter.last,
       PolyA_PWM,
       outdir,
-      silence
+      silence,
+      DIST2ANNOAPAP,
+      DIST2END
     )
     ## save intermediate data before polishing
-    filename <- file.path(outdir, paste0(seqname, "_CPsites.no.polishing.RDS"))
+    filename <- file.path(outdir, paste0(seqname, 
+                                         "_CPsites.no.polishing.RDS"))
     saveRDS(chr.abun, file = filename)
 
     ## polishing
-    chr.abun <- polish_CPs(chr.abun)
+    chr.abun <- polish_CPs(chr.abun, 
+                           output.all = output.all,
+                           DIST2END = DIST2END)
   } else {
+    file.dir <- paste(outdir, seqname, sep = "_")
+    
+    ## remove existing directory
+    if (dir.exists(file.dir))
+    {
+        unlink(file.dir, recursive = TRUE, force = TRUE)
+    }
     reg <- makeRegistry(
-      file.dir = paste(outdir,
-        seqname,
-        sep = "_"
-      ),
+      file.dir = file.dir,
       conf.file = NA,
       packages = "InPAS",
       seed = 1
     )
     cluster_type <- match.arg(cluster_type)
 
-    if (cluster_type %in% c("lsf", "sge", "slurm", "openlava", "torgue") &&
+    if (cluster_type %in% c("lsf", "sge", "slurm", 
+                            "openlava", "torgue") &&
       !file.exists(template_file)) {
       stop("template_file doen't exist")
     }
@@ -519,9 +538,9 @@ search_CPs <- function(seqname,
     batchMap(
       fun = get_CPsites,
       args = list(
-        curr_UTR = curr_UTR,
+        chr.cov.merge = chr.cov.merge,
         conn_next_utr3 = conn_next_utr3,
-        chr.cov.merge = chr.cov.merge
+        curr_UTR = curr_UTR
       ),
       more.args = list(
         seqname = seqname,
@@ -529,10 +548,8 @@ search_CPs <- function(seqname,
         background = background,
         z2s = z2s,
         window_size = window_size,
-        long_coverage_threshold =
-          long_coverage_threshold,
-        adjust_distal_polyA_end =
-          adjust_distal_polyA_end,
+        long_coverage_threshold = long_coverage_threshold,
+        adjust_distal_polyA_end = adjust_distal_polyA_end,
         classifier = classifier,
         classifier_cutoff = classifier_cutoff,
         shift_range = shift_range,
@@ -545,57 +562,51 @@ search_CPs <- function(seqname,
         filter.last = filter.last,
         PolyA_PWM = PolyA_PWM,
         outdir = outdir,
-        silence = silence
+        silence = silence,
+        DIST2ANNOAPAP = DIST2ANNOAPAP,
+        DIST2END = DIST2END
       )
     )
 
     ## start job
     submitJobs(resources = resources)
-    while (!waitForJobs(sleep = 120, timeout = Inf)) {
+    while (!waitForJobs(sleep = 120, timeout = Inf, 
+                        stop.on.error = TRUE)) {
       Sys.sleep(120)
     }
-    if (waitForJobs(sleep = 120, timeout = Inf)) {
+    if (waitForJobs(sleep = 120, timeout = Inf,
+                    stop.on.error = TRUE)) {
       chr.abun <- reduceResultsList()
+      ## save intermediate data before polishing
+      filename <- file.path(outdir, 
+                            paste0(seqname, "_CPsites.non.polishing.RDS"))
+      .collapse_list(dCP.list = chr.abun, filename = filename)
+      ## polish
+      chr.abun <- do.call("rbind", lapply(chr.abun, polish_CPs, 
+                                          output.all = output.all,
+                                          DIST2END = DIST2END))
+      
+      ## delete registry afterwards
+      unlink(reg$file.dir, recursive = TRUE, force = TRUE)
     }
-    ## save intermediate data before polishing
-    filename <- file.path(outdir, paste0(seqname, "_CPsites.no.polishing.RDS"))
-    saveRDS(chr.abun, file = filename)
-
-    ## polish
-    chr.abun <- do.call("rbind", lapply(chr.abun, polish_CPs))
   }
-
+  CPsites <- NULL
   if (!is.null(chr.abun)) {
-    utr3.shorten.UTR <- chr.utr3 %>%
-      plyranges::filter(feature == "utr3") %>%
-      plyranges::select(-c(feature)) %>%
-      plyranges::filter(transcript %in% rownames(chr.abun))
-    chr.abun <- chr.abun[utr3.shorten.UTR$transcript, , drop = FALSE]
-
-    utr3.shorten.UTR$fit_value <- unlist(chr.abun[, "fit_value"])
-    utr3.shorten.UTR$Predicted_Proximal_APA <-
-      unlist(chr.abun[, "Predicted_Proximal_APA"])
-    utr3.shorten.UTR$Predicted_Distal_APA <-
-      unlist(chr.abun[, "Predicted_Distal_APA"])
-    
-    utr3.shorten.UTR$Predicted_Distal_APA_type <-
-      unlist(chr.abun[, "distalCPtype"])
-    utr3.shorten.UTR$Predicted_Proximal_APA_type <-
-      unlist(chr.abun[, "Predicted_Proximal_APA_Type"])
-    
-    # utr3.shorten.UTR$type <- unlist(chr.abun[, "type"])
-    utr3.shorten.UTR$utr3start <- unlist(chr.abun[, "utr3start"])
-    utr3.shorten.UTR$utr3end <- unlist(chr.abun[, "utr3end"])
-    utr3.shorten.UTR <-
-      utr3.shorten.UTR[!is.na(utr3.shorten.UTR$Predicted_Proximal_APA)]
-  } else {
-    utr3.shorten.UTR <- NULL
-  }
-
+      ## convert to GRanges
+      CPsites <- makeGRangesFromDataFrame(chr.abun,
+                                      keep.extra.columns = TRUE,
+                                      ignore.strand = FALSE,
+                                      seqinfo = NULL,
+                                      seqnames.field = "seqnames",
+                                      start.field = "start",
+                                      end.field = "end",
+                                      strand.field = "strand",
+                                      starts.in.df.are.0based = FALSE)
+   } 
   ## save chromosome-wise CP sites
-  if (!is.null(utr3.shorten.UTR)) {
+  if (!is.null(CPsites)) {
     filename <- file.path(outdir, paste0(seqname, "_CPsites.RDS"))
-    saveRDS(utr3.shorten.UTR, file = filename)
+    saveRDS(CPsites, file = filename)
 
     tryCatch(
       {
@@ -622,5 +633,42 @@ search_CPs <- function(seqname,
       }
     )
   }
-  utr3.shorten.UTR
+  CPsites
+}
+
+## helper function to simplify the output of reduceResultsList()
+.collapse_list <- function(dCP.list, filename) {
+    dCPs <- do.call(rbind, lapply(dCP.list, function(x){
+        x$dCPs
+    }))
+    chr.cov.merge <- do.call(c, lapply(dCP.list, function(x){
+        x$chr.cov.merge
+    }))
+    final.utr3 <- do.call(c, lapply(dCP.list, function(x){
+        x$final.utr3
+    }))
+    saved.id <- do.call(c, lapply(dCP.list, function(x){
+        x$saved.id
+    }))
+    flag <- do.call(c, lapply(dCP.list, function(x){
+        x$flag
+    }))
+    fit_value <- do.call(c, lapply(dCP.list, function(x){
+        x$fit_value
+    }))
+    Predicted_Proximal_APA <- do.call(c, lapply(dCP.list, function(x){
+        x$Predicted_Proximal_APA
+    }))
+    fit_value_min <- do.call(c, lapply(dCP.list, function(x){
+        x$fit_value_min
+    }))
+    chr_dCPs <- list(dCPs = dCPs,
+                     chr.cov.merge = chr.cov.merge,
+                     final.utr3 = final.utr3,
+                     saved.id = saved.id,
+                     flag  = flag,
+                     fit_value = fit_value,
+                     Predicted_Proximal_APA = Predicted_Proximal_APA,
+                     fit_value_min = fit_value_min)
+    saveRDS(chr_dCPs, file = filename)
 }

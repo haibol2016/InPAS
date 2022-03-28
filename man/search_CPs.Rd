@@ -7,21 +7,20 @@
 search_CPs(
   seqname,
   sqlite_db,
-  chr.utr3,
   genome = getInPASGenome(),
   MINSIZE = 10,
   window_size = 200,
   search_point_START = 100,
   search_point_END = NA,
-  cutEnd = 200,
+  cutEnd = NA,
   filter.last = TRUE,
-  adjust_distal_polyA_end = TRUE,
+  adjust_distal_polyA_end = FALSE,
   long_coverage_threshold = 2,
   PolyA_PWM = NA,
   classifier = NA,
   classifier_cutoff = 0.8,
-  shift_range = 50,
-  step = 1,
+  shift_range = 100,
+  step = 2,
   outdir = getInPASOutputDirectory(),
   silence = FALSE,
   cluster_type = c("interactive", "multicore", "torque", "slurm", "sge", "lsf",
@@ -29,7 +28,11 @@ search_CPs(
   template_file = NULL,
   mc.cores = 1,
   future.chunk.size = 50,
-  resources = list(walltime = 3600 * 8, num.cpu = 4, mpp = 1024 * 4, queue = "long")
+  resources = list(walltime = 3600 * 8, ncpus = 4, mpp = 1024 * 4, queue = "long",
+    memory = 4 * 4 * 1024),
+  DIST2ANNOAPAP = 500,
+  DIST2END = 1000,
+  output.all = FALSE
 )
 }
 \arguments{
@@ -37,9 +40,6 @@ search_CPs(
 
 \item{sqlite_db}{A path to the SQLite database for InPAS, i.e. the output of
 \code{\link[=setup_sqlitedb]{setup_sqlitedb()}}.}
-
-\item{chr.utr3}{An object of \link[GenomicRanges:GRanges-class]{GenomicRanges::GRanges}. An element of
-the output of \code{\link[=extract_UTR3Anno]{extract_UTR3Anno()}}.}
 
 \item{genome}{A \link[BSgenome:BSgenome-class]{BSgenome::BSgenome} object}
 
@@ -121,10 +121,24 @@ search.}
 \item{resources}{A named list specifying the computing resources when
 cluster_type is set to "torque", "slurm", "sge", "lsf", or "openlava". See
 \href{https://mllg.github.io/batchtools/articles/batchtools.html}{batchtools vignette}}
+
+\item{DIST2ANNOAPAP}{An integer, specifying a cutoff for annotate MSE valleys
+with known proximal APAs in a given downstream distance. Default is 500.}
+
+\item{DIST2END}{An integer, specifying a cutoff of the distance between last
+valley and the end of the 3' UTR (where MSE of the last base is calculated).
+If the last valley is closer to the end than the specified distance, it will
+not be considered because it is very likely due to RNA coverage decay at the
+end of mRNA. Default is 1200. User can consider a value between 1000 and
+1500, depending on the library preparation procedures: RNA fragmentation and
+size selection.}
+
+\item{output.all}{A logical(1), indicating whether to output entries with only
+single CP site for a 3' UTR. Default, FALSE.}
 }
 \value{
 An object of \link[GenomicRanges:GRanges-class]{GenomicRanges::GRanges} containing distal and
-proximal CP site information for each 3' UTR
+proximal CP site information for each 3' UTR if detected.
 }
 \description{
 Estimate the CP sites for UTRs on a given chromosome
@@ -202,7 +216,6 @@ if (interactive()) {
   CPs <- search_CPs(
     seqname = "chr6",
     sqlite_db = sqlite_db,
-    chr.utr3 = utr3[["chr6"]],
     genome = genome,
     MINSIZE = 10,
     window_size = 100,

@@ -73,16 +73,10 @@ get_PAscore2 <- function(seqname,
     .pred.prob.test[, -2]
   }
   gr_lists <- split(gr.s, ceiling(seq_along(gr.s) / 100))
-
-  if (.Platform$OS.type == "window") {
-    plan(multisession)
-  } else {
-    plan(multicore)
-  }
-
-  scores <- future_lapply(gr_lists, nbc_scoring)
+  cores <- parallelly::availableCores() -1
+  scores <- future_lapply(gr_lists, nbc_scoring, 
+        future.scheduling = floor(length(gr_lists)/cores))
   pred.prob.test <- do.call(rbind, scores)
-
   pred.prob.test <- pred.prob.test[match(
     names(gr.s),
     pred.prob.test$peak_name

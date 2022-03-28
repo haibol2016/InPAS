@@ -531,15 +531,14 @@ extract_UTR3Anno <- function(sqlite_db,
       seqnames = rownames(genome.info),
       seqlengths = genome.info$seqlengths,
       is_circular = genome.info$isCircular
-    ) %>%
-    plyranges::complement_ranges()
-
-  utr3.clean.ext1 <- utr3.clean %>%
-    plyranges::filter(!truncated) %>%
+    ) %>% plyranges::complement_ranges()
+  
+  utr3.clean.intact <- utr3.clean %>% plyranges::filter(!truncated)
+  utr3.clean.ext1 <- utr3.clean.intact %>% 
     plyranges::shift_downstream(shift = 1L)
-
+  
   ol <- findOverlaps(utr3.clean.ext1, gaps, ignore.strand = TRUE)
-  ol.utr3.clean <- utr3.clean[queryHits(ol)]
+  ol.utr3.clean <- utr3.clean.intact[queryHits(ol)]
 
   next.exons.gap <- gaps[subjectHits(ol)] %>%
     plyranges::mutate(strand = strand(ol.utr3.clean))
@@ -551,7 +550,7 @@ extract_UTR3Anno <- function(sqlite_db,
   start(next.exons.gap)[wid & as.character(strand(next.exons.gap)) == "-"] <-
     end(next.exons.gap)[
       wid & as.character(strand(next.exons.gap)) == "-"
-    ] - MAX_EXONS_GAP
+    ] - MAX_EXONS_GAP +1
   next.exons.gap <- next.exons.gap %>%
     plyranges::mutate(feature = "next.exon.gap")
   utr3.clean <- utr3.clean %>%
@@ -577,11 +576,20 @@ extract_UTR3Anno <- function(sqlite_db,
         utr3.fixed$feature,
         sep = "|"
       )
+    ## unlist the column "annotatedProximalCP"
+    utr3.fixed$annotatedProximalCP <- unlist(utr3.fixed$annotatedProximalCP)
     utr3.fixed <- split(utr3.fixed, seqnames(utr3.fixed), drop = TRUE)
   } else {
     utr3.fixed <- c(utr3.clean, next.exons.gap)
+    utr3.fixed$annotatedProximalCP <- unlist(utr3.fixed$annotatedProximalCP)
+    names(utr3.fixed) <-
+        paste(utr3.fixed$exon, utr3.fixed$symbol,
+              utr3.fixed$feature,
+              sep = "|"
+        )
+    utr3.fixed <- split(utr3.fixed, seqnames(utr3.fixed), drop = TRUE)
   }
-
+  
   utrs_file <- file.path(outdir, "01.3UTR.annotation.RDS")
   saveRDS(utr3.fixed, file = utrs_file)
   filename_df <- data.frame(type = "utr3", anno_file = utrs_file)

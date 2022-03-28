@@ -37,7 +37,7 @@ calculate_mse <- function(.ele,
   cov_diff <- numeric(length(short_UTR_abun)) ## initiate with 0s
   ss <- max(search_point_START, 1)
   se <- min(search_point_END, .l)
-
+  
   for (i in ss:se) {
     cov_diff_tmp <- .ele
     cov_diff_tmp <- cov_diff_tmp - long_UTR_abun[i]

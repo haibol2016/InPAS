@@ -31,7 +31,7 @@ adjust_proximalCPs <- function(CPs,
                                shift_range,
                                search_point_START,
                                step = 1,
-                               DIST2ANNOAPAP = 1500) {
+                               DIST2ANNOAPAP = 1000) {
   dCPs <- CPs$dCPs
   seqnames <- as.character(dCPs$seqnames)
   strands <- as.character(dCPs$strand)
@@ -68,12 +68,12 @@ adjust_proximalCPs <- function(CPs,
             if (strand == "+") {
               dist <- dist[dist > 0]
               if (length(dist) > 0 && any(dist <= DIST2ANNOAPAP)) {
-                annotated.sites[i] <- known_proximal[dist == min(dist)]
+                annotated.sites[i] <- known_proximal[dist == min(dist)][1]
               }
             } else {
               dist <- dist[dist < 0]
               if (length(dist) > 0 && any(dist >= -DIST2ANNOAPAP)) {
-                annotated.sites[i] <- known_proximal[dist == max(dist)]
+                annotated.sites[i] <- known_proximal[dist == max(dist)][1]
               }
             }
           }
@@ -94,11 +94,12 @@ adjust_proximalCPs <- function(CPs,
       x[[1]]
     }))
 
-  annotated_proximal_apa_pos <- lapply(Predicted_Proximal_APA, function(x) {
-    x[[2]]
+  annotated_proximal_apa_pos <- lapply(Predicted_Proximal_APA, 
+    function(x) {
+       x[[2]]
   })
 
-  dCPs$Predicted_Proximal_APA_Type <- "Novel proximal APA"
+  dCPs$Predicted_Proximal_APA_Type <- NA_character_
   dCPs$Predicted_Proximal_APA[annotated_proximal_apa_flag] <-
     annotated_proximal_apa_pos[annotated_proximal_apa_flag]
   dCPs$Predicted_Proximal_APA_Type[annotated_proximal_apa_flag] <-
@@ -112,14 +113,16 @@ adjust_proximalCPs <- function(CPs,
   CPs$fit_value_min <- lapply(
       CPs$fit_value,
       function(x) {
-              x <- min(x[!is.na(x) & x != 0])
+              if (!is.null(x)) {
+                x <- min(x[!is.na(x) & x != 0])
+              } else {NA}
       })
 
   idx.list <- CPs$Predicted_Proximal_APA
   
   if (is(classifier, "PASclassifier")) {
     cov_diff.list <- CPs$fit_value
-    idx.list <- adjust_proximalCPsByNBC(
+    idx.list <- InPAS:::adjust_proximalCPsByNBC(
       idx.list, cov_diff.list,
       seqnames, starts, strands,
       genome,
@@ -132,7 +135,7 @@ adjust_proximalCPs <- function(CPs,
   } else if (is(PolyA_PWM, "matrix")) {
     ## improvement needed here because only test if one sequence around position
     ## a hit by PWM matrix with score  > 70%
-    idx.list <- adjust_proximalCPsByPWM(
+    idx.list <- InPAS:::adjust_proximalCPsByPWM(
       idx.list, PolyA_PWM, seqnames, starts,
       strands, genome, shift_range,
       search_point_START

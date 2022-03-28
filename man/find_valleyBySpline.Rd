@@ -36,6 +36,14 @@ candidate CP sites otherwise collapsed by selecting the one with lower MSE.}
 is likely the 3' end of the longer 3' UTR if no novel distal CP site is
 detected and the 3' end excluded by setting cutEnd/search_point_END is small.}
 
+\item{DIST2END}{An integer, specifying a cutoff of the distance between last valley
+and the end of the 3' UTR (where MSE of the last base is calculated). If
+the last valley is closer to the end than the specified distance, it will be
+not be considered because it is very likely due to RNA coverage decay at the
+end of mRNA. Default is 1200. User can consider a value between 1000 and
+1500, depending on the library preparation procedures: RNA fragmentation and
+size selection.}
+
 \item{plot}{A logical(1), whether to plot the MSE profile and the candidate
 valleys.}
 }

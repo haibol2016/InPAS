@@ -151,9 +151,12 @@ get_usage4plot <- function(gr,
   datInfo <- lapply(utr3TotalCov, function(.cov) {
     .gr <- gr[names(.cov)]
     data <- mapply(function(.ele, .str) {
+      # reverse coverage data if strand is "-"
       if (.str) .ele <- .ele[nrow(.ele):1, , drop = FALSE]
       se <- nrow(.ele) - 1
-      cov_diff <- apply(.ele, 2, calculate_mse,
+      ## normalized coverage
+      .ele <- .ele / depth.weight
+      cov_diff <- apply( .ele, 2, calculate_mse,
         search_point_START = 1,
         search_point_END = se
       )

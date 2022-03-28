@@ -103,7 +103,6 @@ if (interactive()) {
   CPs <- search_CPs(
     seqname = "chr6",
     sqlite_db = sqlite_db,
-    chr.utr3 = utr3[["chr6"]],
     genome = genome,
     MINSIZE = 10,
     window_size = 100,

@@ -7,6 +7,9 @@
 #'   InPAS analysis results. If it doesn't exist, it will be created.
 #' @param phmm A logical(1) vector, indicating whether data should be
 #'   prepared for singleSample analysis? By default, FALSE
+#' @param min.length.diff An integer(1) vector, specifying minimal length 
+#' difference between proximal and distal APA sites which should be met to be 
+#' considered for differential APA analysis. Default is 200 bp.
 #'
 #' @return coverage view in GRanges
 #' @export
@@ -15,7 +18,8 @@
 get_regionCov <- function(chr.utr3,
                           sqlite_db,
                           outdir = getInPASOutputDirectory(),
-                          phmm = FALSE) {
+                          phmm = FALSE,
+                          min.length.diff = 200) {
   if (!is(chr.utr3, "GRanges") ||
     !all(chr.utr3$feature %in% c("utr3", "next.exon.gap", "CDS"))) {
     stop(
@@ -29,6 +33,7 @@ get_regionCov <- function(chr.utr3,
   if (!is.character(outdir) || length(outdir) != 1) {
     stop("An explicit output directory is required")
   } else {
+    outdir0 <- outdir
     outdir <- file.path(outdir, "008.UTR3_lastCDS.RleCov")
     if (!dir.exists(outdir)) {
       dir.create(outdir,
@@ -42,7 +47,9 @@ get_regionCov <- function(chr.utr3,
   ## get 3'UTRs and their last CDS regions
   chr.regions <- get_UTR3CDS(
     sqlite_db,
-    chr.utr3
+    chr.utr3,
+    outdir0,
+    min.length.diff
   )
   if (length(chr.regions) == 0) {
     return(NULL)

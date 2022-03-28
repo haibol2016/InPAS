@@ -73,10 +73,10 @@ search_distalCPs <- function(chr.cov.merge,
     info <- as.data.frame(curr_UTR.ele)[1, ]
     info$utr3start <- utr3start
     info$utr3end <- utr3end
-    info$distalCP <- 0
-    info$adjustedDistalCP <- NA 
+    info$preliminary_distal_APA <- 0
+    info$NBC_adjusted_distal_APA <- NA 
     info$Predicted_Distal_APA <- NA
-    info$distalCPtype <- NA
+    info$Predicted_Distal_APA_type <- NA
 
     # detect gaps > window_size with 0 coverage and their width 
     # and trimming the collapsed next.exon.gap coverage.
@@ -160,7 +160,7 @@ search_distalCPs <- function(chr.cov.merge,
     ## remove utr3---___---utr3, need to improve.
     if (conn_next_utr && length(next.exon.gap) > 50) {
       ## find split position by the deepest valley in coverage profile
-      next.exon.gap <- remove_convergentUTR3s(next.exon.gap)
+      next.exon.gap <- InPAS:::remove_convergentUTR3s(next.exon.gap)
       conn_next_utr <- FALSE
     }
     
@@ -189,11 +189,11 @@ search_distalCPs <- function(chr.cov.merge,
     if (next.exon.gap.end.pos > 0) # longer 3' utr ending in next.exon.gap
     {
       distal.utr3.len <- length(annotated.utr3) + next.exon.gap.end.pos
-      info$distalCPtype <- "extended novel distal"
+      info$Predicted_Distal_APA_type <- "extended novel distal"
       ## final utr3 extended by valid next exon gap
       final.utr3 <- .ele[1:distal.utr3.len]
       ## absolute coordinates of distal CP sites
-      info$distalCP <- as.numeric(gsub(
+      info$preliminary_distal_APA <- as.numeric(gsub(
         "^.*_SEP_", "",
         names(final.utr3)[length(final.utr3)]
       ))
@@ -215,8 +215,8 @@ search_distalCPs <- function(chr.cov.merge,
       
       final.utr3 <- numeric(0)
       ## no 3' UTR of valid length
-      info$distalCP <- -1
-      info$distalCPtype <- "undetectable"
+      info$preliminary_distal_APA <- -1
+      info$Predicted_Distal_APA_type <- "undetectable"
       
       ## trimming by background threshold from 3' end
       if (length(annotated.utr3) > 0) {
@@ -250,11 +250,12 @@ search_distalCPs <- function(chr.cov.merge,
           final.utr3 <- annotated.utr3[1:trimmed_len]
           ## just a little shortened
           if (trimmed_len >= original_len - 200) {
-            info$distalCPtype <- "known distal"
-            info$distalCP <- {if (info$strand == "-"){info$start} else {info$end}}
+            info$Predicted_Distal_APA_type <- "known distal"
+            info$preliminary_distal_APA <- {if (info$strand == "-"){info$start} 
+                else {info$end}}
           } else {
-            info$distalCPtype <- "shortened novel distal"
-            info$distalCP <- as.numeric(gsub(
+            info$Predicted_Distal_APA_type <- "shortened novel distal"
+            info$preliminary_distal_APA <- as.numeric(gsub(
               "^.*_SEP_", "",
               names(final.utr3)[length(final.utr3)]
             ))
@@ -262,7 +263,7 @@ search_distalCPs <- function(chr.cov.merge,
         }
       }
     }
-    info$Predicted_Distal_APA <- info$distalCP
+    info$Predicted_Distal_APA <- info$preliminary_distal_APA
     return(list(
       info = info,
       cov = chr.cov.merge.ele,

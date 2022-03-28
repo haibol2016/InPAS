@@ -42,14 +42,17 @@
 #'   outdir
 #' )
 #' addLockName(filename = tempfile())
-#' coverage <- get_ssRleCov(
-#'   bedgraph = bedgraphs[1],
-#'   tag = tags[1],
-#'   genome = genome,
-#'   sqlite_db = sqlite_db,
-#'   outdir = outdir,
-#'   chr2exclude = "chrM"
-#' )
+#' coverage <- list()
+#' for (i in seq_along(bedgraphs)) {
+#'       coverage[[tags[i]]] <- get_ssRleCov(
+#'       bedgraph = bedgraphs[i],
+#'       tag = tags[i],
+#'       genome = genome,
+#'       sqlite_db = sqlite_db,
+#'       outdir = outdir,
+#'       chr2exclude = "chrM"
+#'     )
+#' }
 #' get_chromosomes(utr3, sqlite_db)
 get_chromosomes <- function(utr3, sqlite_db) {
   if (missing(utr3) || !is(utr3, "GRangesList")) {
@@ -61,7 +64,13 @@ get_chromosomes <- function(utr3, sqlite_db) {
 
   db_conn <- dbConnect(drv = RSQLite::SQLite(), dbname = sqlite_db)
   covered_chrs <- unique(dbReadTable(db_conn, "sample_coverage")$chr)
+  depth <- dbReadTable(db_conn, "metadata")$depth
   dbDisconnect(db_conn)
+  
+  if (any(depth == 0)) {
+      stop("Some bedgraph files were not correctly read in!\n",
+           "Please call get_ssRleCov() again.")
+  }
 
   ## only consider chromosomes with utr3 annotation and coverage
   chromosomes <- intersect(names(utr3), covered_chrs)

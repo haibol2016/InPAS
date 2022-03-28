@@ -261,44 +261,58 @@ get_ssRleCov <- function(bedgraph,
     chr = seqnames,
     coverage_file = coverage_file
   )
-  tryCatch(
-    {
-      file_lock <- flock::lock(lock_filename)
-      db_conn <- dbConnect(drv = RSQLite::SQLite(), dbname = sqlite_db)
-      res <- dbSendStatement(
-        db_conn,
-        paste0(
-          "UPDATE metadata SET depth = ",
-          depth, " WHERE tag = '",
-          tag, "';"
-        )
-      )
-      dbClearResult(res)
-      ## remove existing record for the same "tag"
-      res <- dbSendStatement(
-        db_conn,
-        paste0(
-          "DELETE FROM sample_coverage WHERE tag = '",
-          tag, "';"
-        )
-      )
-      dbClearResult(res)
-      res <- dbSendStatement(
-        db_conn,
-        "INSERT INTO
+  
+  update_db <- function(lock_filename, sqlite_db, filename_df)
+  {
+      tryCatch(
+          {
+              file_lock <- flock::lock(lock_filename)
+              db_conn <- dbConnect(drv = RSQLite::SQLite(), dbname = sqlite_db)
+              res <- dbSendStatement(
+                  db_conn,
+                  paste0(
+                      "UPDATE metadata SET depth = ",
+                      depth, " WHERE tag = '",
+                      tag, "';"
+                  )
+              )
+              dbClearResult(res)
+              ## remove existing record for the same "tag"
+              res <- dbSendStatement(
+                  db_conn,
+                  paste0(
+                      "DELETE FROM sample_coverage WHERE tag = '",
+                      tag, "';"
+                  )
+              )
+              dbClearResult(res)
+              res <- dbSendStatement(
+                  db_conn,
+                  "INSERT INTO
                        sample_coverage (tag, chr, coverage_file)
                        VALUES (:tag, :chr, :coverage_file);",
-        filename_df
+                  filename_df
+              )
+              dbClearResult(res)
+          },
+          error = function(e) {
+              print(paste(conditionMessage(e)))
+          },
+          finally = {
+              dbDisconnect(db_conn)
+              unlock(file_lock)
+          }
       )
-      dbClearResult(res)
-    },
-    error = function(e) {
-      print(paste(conditionMessage(e)))
-    },
-    finally = {
+      db_conn <- dbConnect(drv = RSQLite::SQLite(), dbname = sqlite_db)
+      metadata <- dbReadTable(db_conn, "metadata")
       dbDisconnect(db_conn)
-      unlock(file_lock)
-    }
-  )
+      fail <- metadata$depth[metadata$tag == tag] == 0
+      fail
+  }
+  fail <- TRUE
+  while (fail) 
+  {
+      fail <- update_db(lock_filename, sqlite_db, filename_df)
+  }
   filename_df
 }

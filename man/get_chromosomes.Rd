@@ -52,13 +52,16 @@ sqlite_db <- setup_sqlitedb(
   outdir
 )
 addLockName(filename = tempfile())
-coverage <- get_ssRleCov(
-  bedgraph = bedgraphs[1],
-  tag = tags[1],
-  genome = genome,
-  sqlite_db = sqlite_db,
-  outdir = outdir,
-  chr2exclude = "chrM"
-)
+coverage <- list()
+for (i in seq_along(bedgraphs)) {
+      coverage[[tags[i]]] <- get_ssRleCov(
+      bedgraph = bedgraphs[i],
+      tag = tags[i],
+      genome = genome,
+      sqlite_db = sqlite_db,
+      outdir = outdir,
+      chr2exclude = "chrM"
+    )
+}
 get_chromosomes(utr3, sqlite_db)
 }

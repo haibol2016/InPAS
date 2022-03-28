@@ -41,8 +41,10 @@ adjust_proximalCPsByNBC <- function(idx.list,
     }
     idx.gp <- 1:length(idx)
     if (shift_range > step) {
-      idx_lo <- idx - shift_range
-      idx_up <- idx + shift_range
+      #idx_lo <- idx - shift_range
+      #idx_up <- idx + shift_range
+      idx_lo <- idx 
+      idx_up <- idx + 2 * shift_range
       idx <- mapply(function(a, b, c) {
         unique(sort(c(seq(a, b, by = step), c)))
       }, idx_lo, idx_up, idx,
@@ -71,7 +73,7 @@ adjust_proximalCPsByNBC <- function(idx.list,
   pos.matrix <- do.call(rbind, pos.matrix)
 
   if (is(pos.matrix, "matrix") && nrow(pos.matrix) > 0) {
-    idx <- get_PAscore2(
+    idx <- InPAS:::get_PAscore2(
       seqnames[pos.matrix[, "ID"]],
       pos.matrix[, "pos"],
       strands[pos.matrix[, "ID"]],

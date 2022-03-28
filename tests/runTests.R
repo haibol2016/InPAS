@@ -4,6 +4,7 @@ pkgs_required <- c(
   "EnsDb.Mmusculus.v79",
   "rtracklayer",
   "GenomicRanges",
+  "RUnit",
   "limma", "future.apply"
 )
 for (pkg in pkgs_required)

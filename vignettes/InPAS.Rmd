@@ -40,16 +40,18 @@ In addition, the InPAS package also provide functions to perform quality control
 First, load the required packages, including InPAS, and species-specific genome and genome annotation database: BSgenome, TxDb and EnsDb.
 
 ```{r load_package}
+logger <- file(tempfile(), open = "wt")
+sink(logger, type="message")
 suppressPackageStartupMessages({
-    library(InPAS)
-    library(BSgenome.Mmusculus.UCSC.mm10)
-    library(BSgenome.Hsapiens.UCSC.hg19)
-    library(TxDb.Mmusculus.UCSC.mm10.knownGene)
-    library(EnsDb.Hsapiens.v86)
-    library(EnsDb.Mmusculus.v79)
-    library(cleanUpdTSeq)
-    library(RSQLite)
-    library(future.apply)
+library(InPAS)
+library(BSgenome.Mmusculus.UCSC.mm10)
+library(BSgenome.Hsapiens.UCSC.hg19)
+library(TxDb.Mmusculus.UCSC.mm10.knownGene)
+library(EnsDb.Hsapiens.v86)
+library(EnsDb.Mmusculus.v79)
+library(cleanUpdTSeq)
+library(RSQLite)
+library(future.apply)
 })
 ```
 ## Step 1: set up a SQLite database
@@ -214,7 +216,6 @@ prepared_data <- setup_CPsSearch(sqlite_db,
 CPsites <- search_CPs(seqname = "chr6",
                        sqlite_db = sqlite_db,
                        genome = getInPASGenome(),
-                       chr.utr3 = utr3.mm10$chr6,
                        MINSIZE = 10, 
                        window_size = 100,
                        search_point_START = 50,
@@ -295,4 +296,6 @@ setup_GSEA(eset = test_out,
 # Session Info
 ```{r sessionInfo, results='asis'}
 sessionInfo()
+sink(type="message")
+close(logger)
 ```

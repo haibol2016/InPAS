@@ -7,6 +7,9 @@
 #'   [extract_UTR3Anno()].
 #' @param outdir A character(1) vector, a path with write permission for storing
 #'   InPAS analysis results. If it doesn't exist, it will be created.
+#' @param min.length.diff An integer(1) vector, specifying minimal length 
+#' difference between proximal and distal APA sites which should be met to be 
+#' considered for differential APA analysis. Default is 200 bp.
 #'
 #' @return An object of [GenomicRanges::GRanges-class] containing GRanges for
 #'   UTRs with alternative CP sites and the corresponding last CDSs.
@@ -15,7 +18,8 @@
 
 get_UTR3CDS <- function(sqlite_db,
                         chr.utr3,
-                        outdir = getInPASOutputDirectory()) {
+                        outdir = getInPASOutputDirectory(),
+                        min.length.diff = 200) {
   if (missing(sqlite_db) || missing(chr.utr3)) {
     stop("sqlite_db and chr.utr3 are required")
   }
@@ -67,6 +71,14 @@ get_UTR3CDS <- function(sqlite_db,
   }
 
   chr.CPsites <- readRDS(chr.CPsites)
+  
+  ## filter invalid APA entries
+  chr.CPsites <- chr.CPsites[!is.na(chr.CPsites$Predicted_Proximal_APA) & 
+                 abs(chr.CPsites$Predicted_Proximal_APA - 
+                       chr.CPsites$Predicted_Distal_APA) >= min.length.diff]
+  if (length(chr.CPsites) == 0) {
+    return(NULL)
+  }
   chr.CPsites <- split(chr.CPsites, names(chr.CPsites))
   utr3.regions <- lapply(chr.CPsites, get_UTR3region)
   utr3.regions <- unlist(GRangesList(utr3.regions))
@@ -77,6 +89,7 @@ get_UTR3CDS <- function(sqlite_db,
     plyranges::filter(feature == "CDS" &
       transcript %in% unique(utr3.regions$transcript))
   utr3.cds.regions <- c(utr3.regions, CDS)
-  saveRDS(utr3.cds.regions, file = file.path(outdir, "UTR3CDS.RDS"))
+  saveRDS(utr3.cds.regions, 
+          file = file.path(outdir, paste0(seqname, "_UTR3CDS.RDS")))
   utr3.cds.regions
 }
