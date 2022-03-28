@@ -109,9 +109,10 @@ get_CPs <- function(tags, conditions, filenames,
     shift_range = 100,
     step = 1,
     outdir = outdir,
-    silence = FALSE
+    silence = FALSE,
+    DIST2END = 0,
+    output.all = FALSE
   )
-
   list(CP = CP, sqlite_db = sqlite_db)
 }
 

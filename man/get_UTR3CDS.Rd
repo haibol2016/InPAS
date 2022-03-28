@@ -8,7 +8,7 @@ get_UTR3CDS(
   sqlite_db,
   chr.utr3,
   outdir = getInPASOutputDirectory(),
-  DIST2END = 200
+  min.length.diff = 200
 )
 }
 \arguments{
@@ -22,7 +22,7 @@ GRanges for a chromosome. It must be one element of an output of
 \item{outdir}{A character(1) vector, a path with write permission for storing
 InPAS analysis results. If it doesn't exist, it will be created.}
 
-\item{DIST2END}{An integer(1) vector, specifying minimal length
+\item{min.length.diff}{An integer(1) vector, specifying minimal length
 difference between proximal and distal APA sites which should be met to be
 considered for differential APA analysis. Default is 200 bp.}
 }

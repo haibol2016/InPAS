@@ -9,7 +9,7 @@ get_regionCov(
   sqlite_db,
   outdir = getInPASOutputDirectory(),
   phmm = FALSE,
-  DIST2END = 200
+  min.length.diff = 200
 )
 }
 \arguments{
@@ -24,7 +24,7 @@ InPAS analysis results. If it doesn't exist, it will be created.}
 \item{phmm}{A logical(1) vector, indicating whether data should be
 prepared for singleSample analysis? By default, FALSE}
 
-\item{DIST2END}{An integer(1) vector, specifying minimal length
+\item{min.length.diff}{An integer(1) vector, specifying minimal length
 difference between proximal and distal APA sites which should be met to be
 considered for differential APA analysis. Default is 200 bp.}
 }
