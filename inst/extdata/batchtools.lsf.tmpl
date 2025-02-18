@@ -1,0 +1,21 @@
+## Default resources can be set in your .batchtools.conf.R by defining the variable
+## 'default.resources' as a named list.
+
+#BSUB -n <%= resources$ncpus %>                     # minmal numbers of processors required for a parallel job
+#BSUB -R rusage[mem=<%= resources$mpp %>]             # ask for memory per cpu
+#BSUB -J <%= job.name %>                             # Name of the job
+#BSUB -o <%= log.file %>                             # Output is sent to logfile, stdout + stderr by default
+#BSUB -q <%= resources$queue %>                      # Job queue
+#BSUB -W <%= round(resources$walltime / 60, 1) %>    # Walltime (LSF requires minutes, batchtools uses seconds)
+##BSUB -M <%= resources$memory %>                    # Memory requirements, e.g. "5000KB", "500MB", "5GB" etc. 
+#BSUB -R "span[hosts=1]"                             # All hosts on the same chassis"
+
+## Export value of DEBUGME environemnt var to slave
+export DEBUGME=<%= Sys.getenv("DEBUGME") %>
+
+<%= sprintf("export OMP_NUM_THREADS=%i", resources$omp.threads) -%>
+<%= sprintf("export OPENBLAS_NUM_THREADS=%i", resources$blas.threads) -%>
+<%= sprintf("export MKL_NUM_THREADS=%i", resources$blas.threads) -%>
+
+Rscript -e 'batchtools::doJobCollection("<%= uri %>")'
+
